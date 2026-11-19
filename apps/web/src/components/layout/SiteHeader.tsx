@@ -83,4 +83,18 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
-          <div className="mt-2 grid grid-cols-2 gap-
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <Link href="/login" onClick={() => setOpen(false)}>
+              <Button variant="secondary" fullWidth>
+                Sign in
+              </Button>
+            </Link>
+            <Link href="/apply" onClick={() => setOpen(false)}>
+              <Button fullWidth>Join us</Button>
+            </Link>
+          </div>
+        </nav>
+      </div>
+    </header>
+  );
+}
