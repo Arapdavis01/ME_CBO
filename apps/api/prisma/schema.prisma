@@ -239,3 +239,81 @@ model ProofOfWork {
   @@index([userId])
   @@index([status])
 }
+/// ============================================================
+/// Impact tracking
+/// ============================================================
+enum ImpactType {
+  TREES_PLANTED
+  WASTE_COLLECTED
+  HOURS_VOLUNTEERED
+  EVENT_ATTENDED
+  CARBON_OFFSET
+}
+
+enum CertificateType {
+  VOLUNTEER_HOURS
+  TREES_PLANTED
+  WASTE_COLLECTED
+  ANNUAL_IMPACT
+}
+
+model ImpactLog {
+  id        String     @id @default(uuid()) @db.Uuid
+  userId    String     @db.Uuid
+  eventId   String?    @db.Uuid
+  type      ImpactType
+  value     Float      // kg for waste, count for trees, hours for time, kg CO₂e for carbon
+  notes     String?
+  createdById String   @db.Uuid
+  createdAt DateTime   @default(now())
+
+  @@index([userId, createdAt])
+  @@index([eventId])
+  @@index([type])
+}
+
+model Badge {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  name        String
+  description String
+  icon        String   // "sprout" | "leaf" | "tree" | "recycle" | "droplet" | "sun" | "star"
+  targetType  ImpactType
+  targetValue Float
+  createdAt   DateTime @default(now())
+
+  awards UserBadge[]
+}
+
+model UserBadge {
+  id       String   @id @default(uuid()) @db.Uuid
+  userId   String   @db.Uuid
+  badgeId  String
+  earnedAt DateTime @default(now())
+
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+}
+
+model Certificate {
+  id               String          @id @default(uuid()) @db.Uuid
+  userId           String          @db.Uuid
+  type             CertificateType
+  title            String
+  periodFrom       DateTime
+  periodTo         DateTime
+  verificationCode String          @unique
+  issuedById       String          @db.Uuid
+  issuedAt         DateTime        @default(now())
+
+  // Snapshot of metrics at issuance time — immutable
+  treesPlanted       Float
+  wasteCollectedKg   Float
+  volunteerHours     Float
+  carbonOffsetKg     Float
+
+  @@index([userId])
+  @@index([type])
+}
