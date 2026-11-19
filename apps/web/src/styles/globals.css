@@ -1,0 +1,40 @@
+/* =========================================================
+   Global entry — imported once in app/layout.tsx
+   Order matters: tokens → themes → typography → animations
+   ========================================================= */
+@import "./tokens.css";
+@import "./themes.css";
+@import "./typography.css";
+@import "./animations.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "./utilities.css";
+@import "./print.css";
+
+/* Base element polish */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  /* Prevent iOS zoom on input focus (font ≥16px) */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
