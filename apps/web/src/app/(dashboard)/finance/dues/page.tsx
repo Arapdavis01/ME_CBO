@@ -27,4 +27,48 @@ export default function DuesPage() {
         <div className="flex gap-2">
           {(["ALL", "PAID", "DUE", "OVERDUE"] as const).map((f) => (
             <button
-              key={
+              key={f}
+              onClick={() => setFilter(f)}
+              className={cn(
+                "shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium focus-ring min-h-[36px]",
+                filter === f
+                  ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-fg)]"
+                  : "border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--fg-muted)]",
+              )}
+            >
+              {f.toLowerCase()}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="mt-4 space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
+        </div>
+      ) : !data || data.length === 0 ? (
+        <Card className="mt-4"><CardBody className="py-10 text-center text-sm text-[var(--fg-muted)]">No invoices in this filter.</CardBody></Card>
+      ) : (
+        <ul className="mt-4 space-y-2">
+          {data.map((inv) => (
+            <li key={inv.id} className="rounded-card border border-[var(--border)] bg-[var(--bg-elevated)] p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-[var(--fg)]">{inv.memberName}</p>
+                  <p className="text-xs text-[var(--fg-subtle)]">
+                    {inv.planName} · {inv.periodLabel}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--fg-subtle)]">
+                    Due {formatDate(inv.dueDate)}
+                  </p>
+                </div>
+                <StatusBadge status={inv.status} />
+              </div>
+              <p className="mt-1 text-base font-bold text-[var(--fg)]">{formatKes(inv.amountKes)}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
