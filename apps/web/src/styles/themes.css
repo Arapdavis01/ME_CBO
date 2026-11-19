@@ -1,0 +1,29 @@
+/* =========================================================
+   Light / Dark theme mappings
+   Toggle via <html class="dark">
+   ========================================================= */
+:root {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+
+  --bg: #0b1220;
+  --bg-elevated: #111a2c;
+  --bg-muted: #16223a;
+  --fg: #e8eef7;
+  --fg-muted: #a9b6c9;
+  --fg-subtle: #7c8aa0;
+  --border: #22314c;
+  --border-strong: #2f4160;
+
+  --primary: #22c55e;
+  --primary-fg: #052e16;
+  --primary-hover: #4ade80;
+  --accent: #4ade80;
+  --accent-fg: #052e16;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
