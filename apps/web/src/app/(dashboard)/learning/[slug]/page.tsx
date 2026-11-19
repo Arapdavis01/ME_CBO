@@ -77,4 +77,21 @@ export default function LearningDetailPage() {
       </Link>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Badge tone="primary">{data.category.toLowerCase()}</Badge>
-        <span className="inline-flex items-center
+        <span className="inline-flex items-center gap-1 text-xs text-[var(--fg-subtle)]">
+          <Clock className="h-3.5 w-3.5" aria-hidden /> {data.durationMin} min ·{" "}
+          {formatDate(data.publishedAt)}
+        </span>
+      </div>
+      <h1 className="mt-2 text-[var(--fg)]">{data.title}</h1>
+      {data.coverImageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={data.coverImageUrl}
+          alt=""
+          className="mt-4 aspect-video w-full rounded-card object-cover"
+        />
+      )}
+      <div className="mt-4">{renderBody(data.body)}</div>
+    </article>
+  );
+}
