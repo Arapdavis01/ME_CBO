@@ -317,3 +317,29 @@ model Certificate {
   @@index([userId])
   @@index([type])
 }
+/// ============================================================
+/// Membership applications
+/// ============================================================
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model MembershipApplication {
+  id           String            @id @default(uuid()) @db.Uuid
+  fullName     String
+  email        String
+  phone        String
+  motivation   String
+  skills       String[]          @default([])
+  status       ApplicationStatus @default(PENDING)
+  reviewNote   String?
+  reviewedById String?           @db.Uuid
+  reviewedAt   DateTime?
+  userId       String?           @db.Uuid  // set on approval
+  submittedAt  DateTime          @default(now())
+
+  @@index([status])
+  @@index([email])
+}
