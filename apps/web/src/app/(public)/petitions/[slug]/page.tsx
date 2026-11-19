@@ -70,4 +70,18 @@ export default function PetitionDetailPage() {
 
         <Card className="mt-6">
           <CardBody>
-           
+            <Button
+              size="lg"
+              fullWidth
+              loading={sign.isPending}
+              disabled={data.hasSigned || data.status !== "OPEN"}
+              onClick={() => sign.mutate()}
+            >
+              {data.hasSigned ? "You've signed ✓" : data.status !== "OPEN" ? "Petition closed" : "Sign this petition"}
+            </Button>
+          </CardBody>
+        </Card>
+      </main>
+    </>
+  );
+}
