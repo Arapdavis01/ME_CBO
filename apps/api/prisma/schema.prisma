@@ -132,3 +132,110 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
 }
+/// ============================================================
+/// Events & field operations
+/// ============================================================
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum EventCategory {
+  CLEANUP
+  PLANTING
+  AWARENESS
+  MEETING
+}
+
+enum RsvpStatus {
+  GOING
+  WAITLIST
+  CANCELLED
+}
+
+enum ProofStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+model Event {
+  id           String        @id @default(uuid()) @db.Uuid
+  title        String
+  description  String
+  location     String
+  lat          Float
+  lng          Float
+  startsAt     DateTime
+  endsAt       DateTime
+  status       EventStatus   @default(DRAFT)
+  category     EventCategory
+  capacity     Int
+  coverImageUrl String?
+  checkInCode  String        @unique // short human-readable code: MECBO-2024-XXXX
+  createdById  String        @db.Uuid
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  rsvps        Rsvp[]
+  checkIns     CheckIn[]
+  proofs       ProofOfWork[]
+
+  @@index([status])
+  @@index([startsAt])
+  @@index([category])
+}
+
+model Rsvp {
+  id        String     @id @default(uuid()) @db.Uuid
+  eventId   String     @db.Uuid
+  userId    String     @db.Uuid
+  status    RsvpStatus @default(GOING)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+}
+
+model CheckIn {
+  id        String   @id @default(uuid()) @db.Uuid
+  eventId   String   @db.Uuid
+  userId    String   @db.Uuid
+  method    String   // "qr" | "code" | "manual"
+  checkedAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+}
+
+model ProofOfWork {
+  id           String      @id @default(uuid()) @db.Uuid
+  clientId     String      @unique // generated on device — ensures idempotency for offline retries
+  eventId      String      @db.Uuid
+  userId       String      @db.Uuid
+  photoUrl     String
+  photoKey     String      // storage key for delete
+  lat          Float
+  lng          Float
+  notes        String?
+  status       ProofStatus @default(PENDING)
+  reviewedById String?     @db.Uuid
+  reviewedAt   DateTime?
+  capturedAt   DateTime
+  createdAt    DateTime    @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([userId])
+  @@index([status])
+}
