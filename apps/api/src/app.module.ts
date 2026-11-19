@@ -15,6 +15,7 @@ import { StorageModule } from "./storage/storage.module";
 /* ─── Feature modules ────────────────────────────────────────────── */
 import { AuthModule } from "./auth/auth.module";
 import { UsersModule } from "./users/users.module";
+import { EventsModule } from "./events/events.module";
 import { HealthModule } from "./health/health.module";
 
 /* ─── Cross-cutting concerns ─────────────────────────────────────── */
@@ -46,6 +47,7 @@ import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
     /* ─── Domain modules ──────────────────────────────────────── */
     AuthModule,
     UsersModule,
+    EventsModule,
     HealthModule,
   ],
 
