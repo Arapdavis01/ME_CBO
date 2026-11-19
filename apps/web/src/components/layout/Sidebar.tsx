@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -29,7 +29,7 @@ type Item = {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  /** Single permission gate (kept for backwards compat). */
+  /** Single permission gate. */
   permission?: Permission;
   /** Alternative gate — visible if the user holds ANY of these. */
   anyOf?: Permission[];
@@ -48,7 +48,6 @@ const items: Item[] = [
     label: "Finance",
     href: "/finance",
     icon: Wallet,
-    // Visible to finance admin OR anyone who can read donations
     anyOf: ["finance:read", "donations:read"],
   },
   { label: "Admin", href: "/admin", icon: ShieldCheck, permission: "admin:users:manage" },
@@ -69,20 +68,48 @@ export function Sidebar({
   const { can, canAny } = usePermissions();
   const drawerRef = useRef<HTMLElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
 
-  /* ---- Lock body scroll while mobile drawer open ---- */
+  /* -------------------------------------------------------------------- */
+  /*  Save the element that opened the drawer, so we can restore focus      */
+  /*  after close (WCAG 2.4.3 — Focus Order).                               */
+  /* -------------------------------------------------------------------- */
+  useEffect(() => {
+    if (mobileOpen) {
+      triggerRef.current = document.activeElement as HTMLElement | null;
+    } else if (triggerRef.current) {
+      triggerRef.current.focus?.();
+      triggerRef.current = null;
+    }
+  }, [mobileOpen]);
+
+  /* -------------------------------------------------------------------- */
+  /*  Lock body scroll while mobile drawer is open.                        */
+  /*  Compensate for the scrollbar width on desktop browsers to prevent    */
+  /*  layout shift when the drawer opens.                                  */
+  /* -------------------------------------------------------------------- */
   useEffect(() => {
     if (!mobileOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const body = document.body;
+    const scrollbarW = window.innerWidth - document.documentElement.clientWidth;
+    const prevOverflow = body.style.overflow;
+    const prevPaddingRight = body.style.paddingRight;
+
+    body.style.overflow = "hidden";
+    if (scrollbarW > 0) body.style.paddingRight = `${scrollbarW}px`;
+
     return () => {
-      document.body.style.overflow = prev;
+      body.style.overflow = prevOverflow;
+      body.style.paddingRight = prevPaddingRight;
     };
   }, [mobileOpen]);
 
-  /* ---- Escape closes drawer, focus moves into it ---- */
+  /* -------------------------------------------------------------------- */
+  /*  Keyboard: Escape closes, Tab is trapped inside the drawer.           */
+  /* -------------------------------------------------------------------- */
   useEffect(() => {
     if (!mobileOpen) return;
+
     closeBtnRef.current?.focus();
 
     const onKey = (e: KeyboardEvent) => {
@@ -91,27 +118,38 @@ export function Sidebar({
         onClose();
         return;
       }
-      // Simple focus trap
-      if (e.key === "Tab" && drawerRef.current) {
-        const focusables = drawerRef.current.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        );
-        if (focusables.length === 0) return;
-        const first = focusables[0]!;
-        const last = focusables[focusables.length - 1]!;
-        if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        } else if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        }
+      if (e.key !== "Tab" || !drawerRef.current) return;
+
+      const focusables = drawerRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusables.length === 0) return;
+
+      const first = focusables[0]!;
+      const last = focusables[focusables.length - 1]!;
+
+      if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      } else if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
       }
     };
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [mobileOpen, onClose]);
+
+  /* -------------------------------------------------------------------- */
+  /*  Auto-close the mobile drawer whenever the route changes.             */
+  /*  This handles programmatic navigation (e.g. from a toast action),     */
+  /*  browser back/forward, and deep links — not just link clicks.         */
+  /* -------------------------------------------------------------------- */
+  useEffect(() => {
+    if (mobileOpen) onClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   const isVisible = (i: Item): boolean => {
     if (i.anyOf) return canAny(i.anyOf);
@@ -122,7 +160,6 @@ export function Sidebar({
   const nav = (
     <nav className="flex flex-col gap-1 p-3" aria-label="Workspace">
       {items.filter(isVisible).map(({ label, href, icon: Icon }) => {
-        // Exact match OR nested sub-route
         const active = pathname === href || pathname.startsWith(`${href}/`);
         return (
           <Link
@@ -131,7 +168,7 @@ export function Sidebar({
             onClick={onClose}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "group flex items-center gap-3 rounded-[var(--radius-md)] px-3 text-sm font-medium transition-colors focus-ring min-h-[44px]",
+              "group flex min-h-[44px] items-center gap-3 rounded-[var(--radius-md)] px-3 text-sm font-medium transition-colors focus-ring",
               active
                 ? "bg-[var(--primary)] text-[var(--primary-fg)]"
                 : "text-[var(--fg-muted)] hover:bg-[var(--bg-muted)] hover:text-[var(--fg)]",
@@ -156,7 +193,7 @@ export function Sidebar({
       {/* ---------------------------------------------------------------- */}
       {/*  Desktop sidebar                                                 */}
       {/* ---------------------------------------------------------------- */}
-      <aside className="hidden w-60 shrink-0 border-r border-[var(--border)] bg-[var(--bg-elevated)] lg:flex lg:flex-col no-print">
+      <aside className="no-print hidden w-60 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--bg-elevated)] lg:flex">
         <div className="flex h-[var(--header-h)] items-center gap-2 border-b border-[var(--border)] px-4">
           <span className="grid h-7 w-7 place-items-center rounded-full bg-[var(--primary)] text-[var(--primary-fg)]">
             <Leaf className="h-4 w-4" aria-hidden />
@@ -176,7 +213,7 @@ export function Sidebar({
       {/* ---------------------------------------------------------------- */}
       <div
         className={cn(
-          "fixed inset-0 z-50 lg:hidden no-print",
+          "no-print fixed inset-0 z-50 lg:hidden",
           mobileOpen ? "pointer-events-auto" : "pointer-events-none",
         )}
         aria-hidden={!mobileOpen}
