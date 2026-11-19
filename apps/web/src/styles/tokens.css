@@ -1,0 +1,73 @@
+/* =========================================================
+   ME_CBO Design Tokens — single source of truth
+   Palette: forest green, leaf green, warm earth yellow
+   ========================================================= */
+:root {
+  /* ---- Brand colors ---- */
+  --me-forest: #14532d;
+  --me-forest-700: #15803d;
+  --me-forest-900: #052e16;
+  --me-leaf: #22c55e;
+  --me-leaf-400: #4ade80;
+  --me-leaf-600: #16a34a;
+  --me-earth: #d97706;
+  --me-earth-400: #fbbf24;
+  --me-sand: #fef3c7;
+  --me-ink: #0f172a;
+
+  /* ---- Semantic tokens (light) ---- */
+  --bg: #f8fafc;
+  --bg-elevated: #ffffff;
+  --bg-muted: #f1f5f9;
+  --fg: #0f172a;
+  --fg-muted: #475569;
+  --fg-subtle: #64748b;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --primary: var(--me-forest);
+  --primary-fg: #ffffff;
+  --primary-hover: var(--me-forest-700);
+  --accent: var(--me-leaf);
+  --accent-fg: #052e16;
+  --warning: var(--me-earth);
+  --danger: #dc2626;
+  --success: var(--me-leaf-600);
+  --focus-ring: #22c55e;
+
+  /* ---- Radii ---- */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-full: 9999px;
+
+  /* ---- Spacing scale (4px base) ---- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* ---- Shadows ---- */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-geo: 0 8px 24px -12px rgba(20, 83, 45, 0.35);
+  --shadow-geo-lg: 0 16px 40px -16px rgba(20, 83, 45, 0.45);
+
+  /* ---- Layout ---- */
+  --container-max: 1200px;
+  --touch-target: 2.75rem; /* 44px — WCAG mobile target */
+  --header-h: 3.5rem;
+  --bottomnav-h: 4rem;
+
+  /* ---- Motion ---- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+}
