@@ -1,6 +1,6 @@
 "use client";
 
-import Dexie, { type Table } from "dexie";
+import Dexie, { type EntityTable } from "dexie";
 import type { ProofOfWorkPayload } from "@/types/events";
 import type { CreateIncidentPayload } from "@/types/incidents";
 
@@ -20,8 +20,8 @@ export type QueuedIncident = CreateIncidentPayload & {
 };
 
 class MECboDB extends Dexie {
-  proofs!: Table<QueuedProof, number>;
-  incidents!: Table<QueuedIncident, number>;
+  proofs!: EntityTable<QueuedProof, "id">;
+  incidents!: EntityTable<QueuedIncident, "id">;
 
   constructor() {
     super("me-cbo-offline");
