@@ -114,7 +114,6 @@ export class EventsService {
     const existing = await this.prisma.event.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException("Event not found");
 
-    // Only creator (team lead+) or admins can update
     const isAdmin = ["SUPER_ADMIN", "OPERATIONS_ADMIN"].includes(actor.role);
     if (!isAdmin && existing.createdById !== actor.id) {
       throw new ForbiddenException("You can only edit events you created");
@@ -191,7 +190,6 @@ export class EventsService {
         data: { status: "CANCELLED" },
       });
 
-      // Promote the first person on the waitlist
       if (wasGoing) {
         const next = await tx.rsvp.findFirst({
           where: { eventId, status: "WAITLIST" },
@@ -266,7 +264,6 @@ export class EventsService {
     userId: string,
     dto: CreateProofDto,
   ): Promise<{ proofId: string; alreadyExisted: boolean }> {
-    // Idempotency — if this clientId already exists, return it
     const existing = await this.prisma.proofOfWork.findUnique({
       where: { clientId: dto.clientId },
     });
@@ -280,7 +277,6 @@ export class EventsService {
     });
     if (!event) throw new NotFoundException("Event not found");
 
-    // Parse data URL or fetch remote URL
     const { buffer, mimeType } = await this.decodeImage(dto.photoDataUrl);
 
     const upload = await this.storage.upload({
@@ -346,7 +342,7 @@ export class EventsService {
   /*  Helpers                                                   */
   /* ─────────────────────────────────────────────────────────── */
   private toResponse(
-    e: Event & { _count: { rsvps: number } },
+    e: Event & { _count?: { rsvps: number } },
     myRsvp: "GOING" | "WAITLIST" | "CANCELLED" | null,
   ): EventResponse {
     return {
@@ -360,11 +356,13 @@ export class EventsService {
       status: e.status,
       category: e.category,
       capacity: e.capacity,
-      attending: e._count.rsvps,
+      attending: e._count?.rsvps ?? 0,
       myRsvp:
-        myRsvp === "GOING" ? "GOING"
-        : myRsvp === "WAITLIST" ? "WAITLIST"
-        : "NONE",
+        myRsvp === "GOING"
+          ? "GOING"
+          : myRsvp === "WAITLIST"
+            ? "WAITLIST"
+            : "NONE",
       coverImageUrl: e.coverImageUrl,
     };
   }
@@ -381,7 +379,6 @@ export class EventsService {
   }
 
   private async decodeImage(dataUrl: string): Promise<{ buffer: Buffer; mimeType: string }> {
-    // https:// URL — fetch it
     if (dataUrl.startsWith("http://") || dataUrl.startsWith("https://")) {
       const res = await fetch(dataUrl);
       if (!res.ok) throw new BadRequestException("Could not fetch image");
@@ -391,7 +388,6 @@ export class EventsService {
       return { buffer: buf, mimeType };
     }
 
-    // data:image/jpeg;base64,... — decode
     const match = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(dataUrl);
     if (!match || !match[1] || !match[2]) {
       throw new BadRequestException("Invalid image data URL");
