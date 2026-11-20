@@ -1,0 +1,12 @@
+{
+  "name": "me-cbo-platform",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "pnpm --filter @me-cbo/api build",
+    "start": "pnpm --filter @me-cbo/api start"
+  },
+  "engines": {
+    "node": ">=20.11.0 <21"
+  }
+}
