@@ -1,7 +1,3 @@
-/* =========================================================
-   Global entry — imported once in app/layout.tsx
-   Order matters: tokens → themes → typography → animations
-   ========================================================= */
 @import "./tokens.css";
 @import "./themes.css";
 @import "./typography.css";
@@ -11,10 +7,106 @@
 @tailwind components;
 @tailwind utilities;
 
-@import "./utilities.css";
-@import "./print.css";
+/* ─── Custom utilities ────────────────────────────────────── */
+@layer utilities {
+  .container-mobile {
+    width: 100%;
+    max-width: var(--container-max);
+    margin-inline: auto;
+    padding-inline: var(--space-4);
+  }
 
-/* Base element polish */
+  @media (min-width: 640px) {
+    .container-mobile {
+      padding-inline: var(--space-6);
+    }
+  }
+
+  .touch-target {
+    min-height: var(--touch-target);
+    min-width: var(--touch-target);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .glass {
+    background: color-mix(in srgb, var(--bg-elevated) 70%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .pb-safe {
+    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pb-bottomnav {
+    padding-bottom: calc(var(--bottomnav-h) + env(safe-area-inset-bottom) + var(--space-4));
+  }
+
+  .focus-ring:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* ─── Print styles (no @layer needed) ─────────────────────── */
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .me-certificate {
+    border: 2px solid var(--me-forest);
+    padding: 24mm;
+    page-break-inside: avoid;
+  }
+
+  a {
+    color: #000 !important;
+    text-decoration: underline;
+  }
+}
+
+/* ─── Base element polish ─────────────────────────────────── */
 @layer base {
   *,
   *::before,
@@ -31,7 +123,6 @@
     overflow-x: hidden;
   }
 
-  /* Prevent iOS zoom on input focus (font ≥16px) */
   input,
   textarea,
   select {
