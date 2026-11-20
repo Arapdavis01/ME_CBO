@@ -1,10 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
   extensions = [postgis]
 }
 
@@ -49,6 +51,13 @@ model User {
   lastLoginAt   DateTime?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
+
+  // ─── Profile ──────────────────────────────────────
+  skills      String[]  @default([])
+  location    String?
+  avatarUrl   String?
+  bio         String?
+  motivation  String?   // from application
 
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]     @relation("ActorAuditLogs")
@@ -132,6 +141,7 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
 }
+
 /// ============================================================
 /// Events & field operations
 /// ============================================================
@@ -163,26 +173,26 @@ enum ProofStatus {
 }
 
 model Event {
-  id           String        @id @default(uuid()) @db.Uuid
-  title        String
-  description  String
-  location     String
-  lat          Float
-  lng          Float
-  startsAt     DateTime
-  endsAt       DateTime
-  status       EventStatus   @default(DRAFT)
-  category     EventCategory
-  capacity     Int
+  id            String        @id @default(uuid()) @db.Uuid
+  title         String
+  description   String
+  location      String
+  lat           Float
+  lng           Float
+  startsAt      DateTime
+  endsAt        DateTime
+  status        EventStatus   @default(DRAFT)
+  category      EventCategory
+  capacity      Int
   coverImageUrl String?
-  checkInCode  String        @unique // short human-readable code: MECBO-2024-XXXX
-  createdById  String        @db.Uuid
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  checkInCode   String        @unique // short human-readable code: MECBO-2024-XXXX
+  createdById   String        @db.Uuid
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  rsvps        Rsvp[]
-  checkIns     CheckIn[]
-  proofs       ProofOfWork[]
+  rsvps    Rsvp[]
+  checkIns CheckIn[]
+  proofs   ProofOfWork[]
 
   @@index([status])
   @@index([startsAt])
@@ -239,6 +249,7 @@ model ProofOfWork {
   @@index([userId])
   @@index([status])
 }
+
 /// ============================================================
 /// Impact tracking
 /// ============================================================
@@ -258,14 +269,14 @@ enum CertificateType {
 }
 
 model ImpactLog {
-  id        String     @id @default(uuid()) @db.Uuid
-  userId    String     @db.Uuid
-  eventId   String?    @db.Uuid
-  type      ImpactType
-  value     Float      // kg for waste, count for trees, hours for time, kg CO₂e for carbon
-  notes     String?
-  createdById String   @db.Uuid
-  createdAt DateTime   @default(now())
+  id          String     @id @default(uuid()) @db.Uuid
+  userId      String     @db.Uuid
+  eventId     String?    @db.Uuid
+  type        ImpactType
+  value       Float      // kg for waste, count for trees, hours for time, kg CO₂e for carbon
+  notes       String?
+  createdById String     @db.Uuid
+  createdAt   DateTime   @default(now())
 
   @@index([userId, createdAt])
   @@index([eventId])
@@ -273,14 +284,14 @@ model ImpactLog {
 }
 
 model Badge {
-  id          String   @id @default(uuid())
-  slug        String   @unique
+  id          String     @id @default(uuid())
+  slug        String     @unique
   name        String
   description String
-  icon        String   // "sprout" | "leaf" | "tree" | "recycle" | "droplet" | "sun" | "star"
+  icon        String     // "sprout" | "leaf" | "tree" | "recycle" | "droplet" | "sun" | "star"
   targetType  ImpactType
   targetValue Float
-  createdAt   DateTime @default(now())
+  createdAt   DateTime   @default(now())
 
   awards UserBadge[]
 }
@@ -309,14 +320,15 @@ model Certificate {
   issuedAt         DateTime        @default(now())
 
   // Snapshot of metrics at issuance time — immutable
-  treesPlanted       Float
-  wasteCollectedKg   Float
-  volunteerHours     Float
-  carbonOffsetKg     Float
+  treesPlanted     Float
+  wasteCollectedKg Float
+  volunteerHours   Float
+  carbonOffsetKg   Float
 
   @@index([userId])
   @@index([type])
 }
+
 /// ============================================================
 /// Membership applications
 /// ============================================================
