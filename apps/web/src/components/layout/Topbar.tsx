@@ -29,7 +29,7 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
           {/* Phones and tablets: the sidebar is hidden, so show the logo here.
               The logo image already contains the name "ME CBO". */}
           <div className="lg:hidden">
-            <Logo height={36} href="/dashboard" />
+            <Logo height={44} href="/dashboard" />
           </div>
           {/* Desktop: the sidebar already shows the logo. */}
           <span className="hidden truncate text-sm font-semibold text-[var(--fg)] lg:block">
