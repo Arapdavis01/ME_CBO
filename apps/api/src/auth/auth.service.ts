@@ -114,11 +114,17 @@ export class AuthService {
     const failKey = `fail:login:${email}`;
     const lockKey = `lock:login:${email}`;
 
-    const locked = await this.redis.get(lockKey);
+    // If Redis is down, skip the lockout check instead of blocking every login.
+    const locked = await this.redis.get(lockKey).catch(() => {
+      this.logger.warn("Redis unavailable: login lockout check skipped");
+      return null;
+    });
     if (locked) throw new ForbiddenException(AUTH_ERRORS.ACCOUNT_LOCKED);
 
     const user = await this.findUserByEmail(email);
     if (!user) {
+      // Same work as a real password check, so timing does not reveal unknown emails.
+      await this.passwords.verifyDummy(dto.password);
       await this.bumpFailure(failKey, lockKey);
       void this.audit.record({
         action: "auth.login.fail",
@@ -150,7 +156,7 @@ export class AuthService {
     }
 
     // Correct password: reset the failure counter.
-    await this.redis.del(failKey);
+    await this.redis.del(failKey).catch(() => undefined);
 
     // MFA is mandatory for admin roles. If they have not enrolled yet, hand
     // back a short-lived setup ticket instead of a session. The ticket only
@@ -209,7 +215,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: challenge.userId } });
     if (!user || !user.mfaSecret) throw new UnauthorizedException(AUTH_ERRORS.MFA_INVALID);
 
-    const totpOk = this.mfa.verifyTotp(user.mfaSecret, code);
+    const totpOk = await this.mfa.verifyTotp(user.id, user.mfaSecret, code);
     const backupOk =
       !totpOk && (await this.mfa.consumeBackupCode(user.id, code, user.mfaBackupCodes));
 
@@ -410,7 +416,7 @@ export class AuthService {
     const { secret, qrDataUrl } = await this.mfa.generateTotpSecret(user.email);
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { mfaSecret: secret }, // pending confirmation
+      data: { mfaSecret: this.mfa.encryptSecret(secret) }, // pending confirmation
     });
     return { qrDataUrl, secret };
   }
@@ -421,7 +427,7 @@ export class AuthService {
   ): Promise<{ backupCodes: string[] }> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user || !user.mfaSecret) throw new BadRequestException("Start MFA setup first");
-    if (!this.mfa.verifyTotp(user.mfaSecret, code)) {
+    if (!(await this.mfa.verifyTotp(user.id, user.mfaSecret, code))) {
       throw new BadRequestException(AUTH_ERRORS.MFA_INVALID);
     }
     const codes = this.mfa.generateBackupCodes();
@@ -555,9 +561,15 @@ export class AuthService {
   }
 
   private async bumpFailure(failKey: string, lockKey: string): Promise<void> {
-    const count = await this.redis.incrWithTtl(failKey, LOGIN_LOCKOUT_SECONDS);
-    if (count >= LOGIN_LOCKOUT_THRESHOLD) {
-      await this.redis.setEx(lockKey, LOGIN_LOCKOUT_SECONDS, "locked");
+    try {
+      const count = await this.redis.incrWithTtl(failKey, LOGIN_LOCKOUT_SECONDS);
+      if (count >= LOGIN_LOCKOUT_THRESHOLD) {
+        await this.redis.setEx(lockKey, LOGIN_LOCKOUT_SECONDS, "locked");
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Redis unavailable: failed login not counted (${(err as Error).message})`,
+      );
     }
   }
 
