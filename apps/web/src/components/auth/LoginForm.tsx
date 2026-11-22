@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { authApi } from "@/lib/api/auth.api";
 import { ApiError } from "@/lib/api/client";
 import { useAuthStore } from "@/store/auth.store";
+import { safeNext } from "@/lib/auth/next";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -20,13 +22,10 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-/** Extra response the API returns when an admin has not enrolled in MFA yet. */
-type MfaSetupRequired = { mfaSetupRequired: true; setupId: string };
-type LoginResponse = Awaited<ReturnType<typeof authApi.login>> | MfaSetupRequired;
-
 export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
+  const queryClient = useQueryClient();
   const setUser = useAuthStore((s) => s.setUser);
   const [showPw, setShowPw] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -43,7 +42,8 @@ export function LoginForm() {
   const onSubmit = async (values: FormValues) => {
     setSubmitting(true);
     try {
-      const result = (await authApi.login(values)) as LoginResponse;
+      const result = await authApi.login(values);
+      const next = safeNext(params.get("next"));
 
       // Admin must enroll in two-factor authentication first.
       if ("mfaSetupRequired" in result) {
@@ -57,13 +57,14 @@ export function LoginForm() {
         // Stash challenge in sessionStorage so the MFA page can read it
         sessionStorage.setItem("me_mfa_challenge", result.challengeId);
         toast.info("Enter your authenticator code to continue.");
-        router.push("/mfa/verify");
+        router.push(`/mfa/verify?next=${encodeURIComponent(next)}`);
         return;
       }
 
+      // Seed the session cache so the dashboard does not flash a spinner.
+      queryClient.setQueryData(["auth", "me"], result.user);
       setUser(result.user);
       toast.success(`Welcome back, ${result.user.fullName.split(" ")[0]}!`);
-      const next = params.get("next") || "/dashboard";
       router.replace(next);
     } catch (err) {
       // Keep the real reason in the browser console for debugging.
