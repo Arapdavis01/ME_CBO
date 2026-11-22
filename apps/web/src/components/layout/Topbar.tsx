@@ -6,7 +6,7 @@ import { Bell, LogOut, Menu, Moon, Sun, UserCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { roleLabel } from "@/lib/auth/permissions";
-import { Button } from "@/components/ui/Button";
+import { Logo } from "@/components/ui/Logo";
 
 export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
   const { user, logout } = useAuth();
@@ -26,7 +26,13 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
         </button>
 
         <div className="flex min-w-0 flex-1 items-center">
-          <span className="truncate text-sm font-semibold text-[var(--fg)]">
+          {/* Phones and tablets: the sidebar is hidden, so show the logo here.
+              The logo image already contains the name "ME CBO". */}
+          <div className="lg:hidden">
+            <Logo height={36} href="/dashboard" />
+          </div>
+          {/* Desktop: the sidebar already shows the logo. */}
+          <span className="hidden truncate text-sm font-semibold text-[var(--fg)] lg:block">
             ME_CBO Workspace
           </span>
         </div>
