@@ -5,11 +5,11 @@ import {
   BadRequestException,
   Logger,
 } from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { RedisService } from "../redis/redis.service";
 import { AuditService } from "../audit/audit.service";
+import { EmailService } from "../email/email.service";
 import { PasswordService } from "./password.service";
 import { TokenService } from "./token.service";
 import { MfaService } from "./mfa.service";
@@ -21,10 +21,11 @@ import type { Role } from "@prisma/client";
 const LOGIN_LOCKOUT_THRESHOLD = 5;
 const LOGIN_LOCKOUT_SECONDS = 15 * 60;
 const MFA_CHALLENGE_TTL = 5 * 60; // 5 minutes
+const MFA_SETUP_TTL = 10 * 60; // 10 minutes
+const MFA_SETUP_MAX_ATTEMPTS = 5;
 
-export type LoginResult =
-  | { mfaRequired: false; user: SafeUser; access: string; refresh: string }
-  | { mfaRequired: true; challengeId: string };
+/** Roles that MUST have two-factor authentication enabled. */
+const MFA_REQUIRED_ROLES: Role[] = ["SUPER_ADMIN", "OPERATIONS_ADMIN", "FINANCE_ADMIN"];
 
 export type SafeUser = {
   id: string;
@@ -32,6 +33,23 @@ export type SafeUser = {
   email: string;
   role: Role;
   mfaEnabled: boolean;
+};
+
+export type SessionResult = {
+  mfaRequired: false;
+  user: SafeUser;
+  access: string;
+  refresh: string;
+};
+
+export type LoginResult =
+  | SessionResult
+  | { mfaRequired: true; challengeId: string };
+
+/** Returned by login() when an admin has not enrolled in MFA yet. */
+export type SetupRequiredResult = {
+  mfaSetupRequired: true;
+  setupId: string;
 };
 
 @Injectable()
@@ -42,23 +60,25 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly audit: AuditService,
+    private readonly email: EmailService,
     private readonly passwords: PasswordService,
     private readonly tokens: TokenService,
     private readonly mfa: MfaService,
-    private readonly jwt: JwtService,
   ) {}
 
   /* ------------------------------------------------------------------ */
   /*  Register                                                          */
   /* ------------------------------------------------------------------ */
   async register(dto: RegisterDto, ip: string, ua: string): Promise<SafeUser> {
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const email = dto.email.trim().toLowerCase();
+
+    const existing = await this.findUserByEmail(email);
     if (existing) throw new BadRequestException("Email already registered");
 
     const passwordHash = await this.passwords.hash(dto.password);
     const user = await this.prisma.user.create({
       data: {
-        email: dto.email,
+        email,
         passwordHash,
         fullName: dto.fullName,
         phone: dto.phone ?? null,
@@ -77,25 +97,34 @@ export class AuthService {
       userAgent: ua,
     });
 
-    // TODO (Batch B2): send verification email
+    // TODO: send verification email for self-registered users
     return this.toSafe(user);
   }
 
   /* ------------------------------------------------------------------ */
   /*  Login                                                             */
   /* ------------------------------------------------------------------ */
-  async login(dto: LoginDto, ip: string, ua: string): Promise<LoginResult> {
-    const lockKey = `lock:login:${dto.email.toLowerCase()}`;
+  async login(
+    dto: LoginDto,
+    ip: string,
+    ua: string,
+  ): Promise<LoginResult | SetupRequiredResult> {
+    const email = dto.email.trim().toLowerCase();
+    // Two separate keys: one counts failures, one marks the account as locked.
+    const failKey = `fail:login:${email}`;
+    const lockKey = `lock:login:${email}`;
+
     const locked = await this.redis.get(lockKey);
     if (locked) throw new ForbiddenException(AUTH_ERRORS.ACCOUNT_LOCKED);
 
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const user = await this.findUserByEmail(email);
     if (!user) {
-      await this.bumpFailure(lockKey);
+      await this.bumpFailure(failKey, lockKey);
       void this.audit.record({
         action: "auth.login.fail",
-        target: dto.email,
-        ip, userAgent: ua,
+        target: email,
+        ip,
+        userAgent: ua,
         metadata: { reason: "no_user" },
       });
       throw new UnauthorizedException(AUTH_ERRORS.INVALID_CREDENTIALS);
@@ -107,28 +136,49 @@ export class AuthService {
 
     const ok = await this.passwords.verify(user.passwordHash, dto.password);
     if (!ok) {
-      await this.bumpFailure(lockKey);
+      await this.bumpFailure(failKey, lockKey);
       void this.audit.record({
-        actorId: user.id, actorName: user.fullName,
-        action: "auth.login.fail", target: user.email, ip, userAgent: ua,
+        actorId: user.id,
+        actorName: user.fullName,
+        action: "auth.login.fail",
+        target: user.email,
+        ip,
+        userAgent: ua,
         metadata: { reason: "wrong_password" },
       });
       throw new UnauthorizedException(AUTH_ERRORS.INVALID_CREDENTIALS);
     }
 
-    // MFA mandatory for admins
-    const adminRoles: Role[] = ["SUPER_ADMIN", "OPERATIONS_ADMIN", "FINANCE_ADMIN"];
-    const mfaRequired = user.mfaEnabled || adminRoles.includes(user.role);
+    // Correct password: reset the failure counter.
+    await this.redis.del(failKey);
 
-    if (mfaRequired && !user.mfaEnabled) {
-      throw new ForbiddenException("MFA enrollment required — visit /auth/mfa/setup");
+    // MFA is mandatory for admin roles. If they have not enrolled yet, hand
+    // back a short-lived setup ticket instead of a session. The ticket only
+    // works on the two "mfa/setup/ticket" endpoints.
+    const mustEnroll = MFA_REQUIRED_ROLES.includes(user.role) && !user.mfaEnabled;
+    if (mustEnroll) {
+      const setupId = randomUUID();
+      await this.redis.setEx(`mfa-setup:${setupId}`, MFA_SETUP_TTL, user.id);
+      void this.audit.record({
+        actorId: user.id,
+        actorName: user.fullName,
+        action: "auth.login.mfa.setup_required",
+        target: user.email,
+        ip,
+        userAgent: ua,
+      });
+      return { mfaSetupRequired: true, setupId };
     }
 
     if (user.mfaEnabled) {
       const challenge = await this.createMfaChallenge(user.id, "TOTP");
       void this.audit.record({
-        actorId: user.id, actorName: user.fullName,
-        action: "auth.login.mfa.challenge", target: user.email, ip, userAgent: ua,
+        actorId: user.id,
+        actorName: user.fullName,
+        action: "auth.login.mfa.challenge",
+        target: user.email,
+        ip,
+        userAgent: ua,
       });
       return { mfaRequired: true, challengeId: challenge.id };
     }
@@ -140,7 +190,12 @@ export class AuthService {
   /* ------------------------------------------------------------------ */
   /*  MFA verify                                                        */
   /* ------------------------------------------------------------------ */
-  async verifyMfa(challengeId: string, code: string, ip: string, ua: string): Promise<LoginResult> {
+  async verifyMfa(
+    challengeId: string,
+    code: string,
+    ip: string,
+    ua: string,
+  ): Promise<LoginResult> {
     const challenge = await this.prisma.mfaChallenge.findUnique({
       where: { id: challengeId },
     });
@@ -155,7 +210,8 @@ export class AuthService {
     if (!user || !user.mfaSecret) throw new UnauthorizedException(AUTH_ERRORS.MFA_INVALID);
 
     const totpOk = this.mfa.verifyTotp(user.mfaSecret, code);
-    const backupOk = !totpOk && (await this.mfa.consumeBackupCode(user.id, code, user.mfaBackupCodes));
+    const backupOk =
+      !totpOk && (await this.mfa.consumeBackupCode(user.id, code, user.mfaBackupCodes));
 
     if (!totpOk && !backupOk) {
       await this.prisma.mfaChallenge.update({
@@ -163,8 +219,11 @@ export class AuthService {
         data: { attempts: { increment: 1 } },
       });
       void this.audit.record({
-        actorId: user.id, actorName: user.fullName,
-        action: "auth.login.mfa.fail", ip, userAgent: ua,
+        actorId: user.id,
+        actorName: user.fullName,
+        action: "auth.login.mfa.fail",
+        ip,
+        userAgent: ua,
       });
       throw new UnauthorizedException(AUTH_ERRORS.MFA_INVALID);
     }
@@ -201,7 +260,8 @@ export class AuthService {
       void this.audit.record({
         actorId: row.userId,
         action: "auth.refresh.reuse_detected",
-        ip, userAgent: ua,
+        ip,
+        userAgent: ua,
       });
       throw new UnauthorizedException(AUTH_ERRORS.TOKEN_INVALID);
     }
@@ -246,6 +306,8 @@ export class AuthService {
       return refreshRaw;
     });
 
+    // The role comes from the database, so a role change takes effect on the
+    // next refresh (at most one access-token lifetime later).
     const access = await this.tokens.signAccess({
       sub: user.id,
       role: user.role,
@@ -279,9 +341,10 @@ export class AuthService {
   /* ------------------------------------------------------------------ */
   /*  Password reset                                                    */
   /* ------------------------------------------------------------------ */
-  async requestPasswordReset(email: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user) return; // silent — don't leak emails
+  async requestPasswordReset(emailInput: string): Promise<void> {
+    const user = await this.findUserByEmail(emailInput.trim().toLowerCase());
+    if (!user) return; // silent — don't leak which emails exist
+
     const token = randomBytes(32).toString("hex");
     const tokenHash = createHash("sha256").update(token).digest("hex");
     await this.prisma.passwordReset.create({
@@ -291,8 +354,21 @@ export class AuthService {
         expiresAt: new Date(Date.now() + 30 * 60 * 1000),
       },
     });
-    // TODO (Batch B2): send email with token
-    this.logger.log(`Password reset requested for ${email} — token: ${token.slice(0, 8)}…`);
+
+    const siteUrl = process.env.APP_ORIGIN ?? "http://localhost:3000";
+    const resetUrl = `${siteUrl}/reset-password?token=${token}`;
+    void this.email
+      .sendPasswordReset(user.email, resetUrl)
+      .catch((err) =>
+        this.logger.error(`Password reset email failed: ${(err as Error).message}`),
+      );
+
+    void this.audit.record({
+      actorId: user.id,
+      actorName: user.fullName,
+      action: "auth.password.reset_requested",
+      target: user.email,
+    });
   }
 
   async confirmPasswordReset(token: string, newPassword: string): Promise<void> {
@@ -316,10 +392,15 @@ export class AuthService {
         data: { revokedAt: new Date() },
       }),
     ]);
+
+    void this.audit.record({
+      actorId: row.userId,
+      action: "auth.password.reset_confirmed",
+    });
   }
 
   /* ------------------------------------------------------------------ */
-  /*  MFA setup                                                         */
+  /*  MFA setup (logged-in users)                                       */
   /* ------------------------------------------------------------------ */
   async startMfaSetup(userId: string): Promise<{ qrDataUrl: string; secret: string }> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
@@ -353,9 +434,75 @@ export class AuthService {
   }
 
   /* ------------------------------------------------------------------ */
+  /*  MFA setup (admins enrolling for the first time, via setup ticket) */
+  /* ------------------------------------------------------------------ */
+  async startMfaSetupWithTicket(
+    setupId: string,
+  ): Promise<{ qrDataUrl: string; secret: string }> {
+    const userId = await this.userIdForSetup(setupId);
+    return this.startMfaSetup(userId);
+  }
+
+  async confirmMfaSetupWithTicket(
+    setupId: string,
+    code: string,
+    ip: string,
+    ua: string,
+  ): Promise<SessionResult & { backupCodes: string[] }> {
+    const userId = await this.userIdForSetup(setupId);
+
+    // Limit guesses of the 6-digit code per ticket.
+    const attempts = await this.redis.incrWithTtl(
+      `mfa-setup-attempts:${setupId}`,
+      MFA_SETUP_TTL,
+    );
+    if (attempts > MFA_SETUP_MAX_ATTEMPTS) {
+      await this.redis.del(`mfa-setup:${setupId}`);
+      throw new ForbiddenException(AUTH_ERRORS.ACCOUNT_LOCKED);
+    }
+
+    const { backupCodes } = await this.confirmMfaSetup(userId, code);
+    await this.redis.del(`mfa-setup:${setupId}`);
+    await this.redis.del(`mfa-setup-attempts:${setupId}`);
+
+    // Re-read the user so mfaEnabled=true ends up in the access token.
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException();
+
+    void this.audit.record({
+      actorId: user.id,
+      actorName: user.fullName,
+      action: "auth.mfa.enrolled",
+      target: user.email,
+      ip,
+      userAgent: ua,
+    });
+
+    const session = await this.issueSession(user, ip, ua);
+    return { ...session, backupCodes };
+  }
+
+  /* ------------------------------------------------------------------ */
   /*  Helpers                                                           */
   /* ------------------------------------------------------------------ */
-  private async issueSession(user: { id: string; fullName: string; email: string; role: Role; mfaEnabled: boolean }, ip: string, ua: string): Promise<LoginResult> {
+  private async userIdForSetup(setupId: string): Promise<string> {
+    const userId = await this.redis.get(`mfa-setup:${setupId}`);
+    if (!userId) throw new UnauthorizedException(AUTH_ERRORS.MFA_EXPIRED);
+    return userId;
+  }
+
+  /** Case-insensitive lookup so "Admin@x.org" and "admin@x.org" are the same account. */
+  private findUserByEmail(email: string) {
+    return this.prisma.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
+    });
+  }
+
+  private async issueSession(
+    user: { id: string; fullName: string; email: string; role: Role; mfaEnabled: boolean },
+    ip: string,
+    ua: string,
+  ): Promise<SessionResult> {
     const fam = this.tokens.newFamilyId();
     const created = await this.prisma.refreshToken.create({
       data: {
@@ -382,13 +529,20 @@ export class AuthService {
       data: { lastLoginAt: new Date() },
     });
     void this.audit.record({
-      actorId: user.id, actorName: user.fullName,
-      action: "auth.login.success", target: user.email, ip, userAgent: ua,
+      actorId: user.id,
+      actorName: user.fullName,
+      action: "auth.login.success",
+      target: user.email,
+      ip,
+      userAgent: ua,
     });
     return { mfaRequired: false, user: this.toSafe(user), access, refresh };
   }
 
-  private async createMfaChallenge(userId: string, method: "TOTP"): Promise<{ id: string }> {
+  private async createMfaChallenge(
+    userId: string,
+    method: "TOTP",
+  ): Promise<{ id: string }> {
     const created = await this.prisma.mfaChallenge.create({
       data: {
         userId,
@@ -400,14 +554,20 @@ export class AuthService {
     return { id: created.id };
   }
 
-  private async bumpFailure(lockKey: string): Promise<void> {
-    const count = await this.redis.incrWithTtl(lockKey, LOGIN_LOCKOUT_SECONDS);
+  private async bumpFailure(failKey: string, lockKey: string): Promise<void> {
+    const count = await this.redis.incrWithTtl(failKey, LOGIN_LOCKOUT_SECONDS);
     if (count >= LOGIN_LOCKOUT_THRESHOLD) {
       await this.redis.setEx(lockKey, LOGIN_LOCKOUT_SECONDS, "locked");
     }
   }
 
-  private toSafe(user: { id: string; fullName: string; email: string; role: Role; mfaEnabled: boolean }): SafeUser {
+  private toSafe(user: {
+    id: string;
+    fullName: string;
+    email: string;
+    role: Role;
+    mfaEnabled: boolean;
+  }): SafeUser {
     return {
       id: user.id,
       fullName: user.fullName,
