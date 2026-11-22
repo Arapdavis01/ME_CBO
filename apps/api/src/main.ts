@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { ValidationPipe, Logger } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import helmet from "helmet";
@@ -7,12 +8,25 @@ import cookieParser from "cookie-parser";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
   });
 
   const prefix = process.env.API_PREFIX ?? "api/v1";
   app.setGlobalPrefix(prefix);
+
+  // ─── Proxy trust ─────────────────────────────────────
+  // Number of proxies between the visitor and this API. Traffic goes
+  // browser -> Render (web) -> Next.js /api rewrite -> Render (API) -> here,
+  // so the default is 3. Too low: every visitor looks like the same IP.
+  // Too high: a caller can fake their IP. Verify with GET /health/ip
+  // (set DEBUG_IP=true temporarily), then set TRUST_PROXY_HOPS.
+  const hopsRaw = Number(process.env.TRUST_PROXY_HOPS ?? 3);
+  const hops = Number.isInteger(hopsRaw) && hopsRaw >= 0 ? hopsRaw : 3;
+  app.set("trust proxy", hops);
+
+  // Close database/Redis connections cleanly when Render stops the service.
+  app.enableShutdownHooks();
 
   // ─── Security headers ────────────────────────────────
   app.use(
@@ -26,6 +40,8 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // ─── CORS (credentials required for cookies) ─────────
+  // The web app calls the API through its own /api proxy, so CORS is only
+  // needed for direct calls (testing, other tools).
   const origins = (process.env.APP_ORIGIN ?? "http://localhost:3000")
     .split(",")
     .map((o) => o.trim());
@@ -45,7 +61,7 @@ async function bootstrap() {
     }),
   );
 
-  // ─── Swagger ─────────────────────────────────────────
+  // ─── Swagger (never in production) ───────────────────
   if (process.env.NODE_ENV !== "production") {
     const config = new DocumentBuilder()
       .setTitle("ME_CBO API")
@@ -58,9 +74,8 @@ async function bootstrap() {
   }
 
   const port = Number(process.env.PORT ?? 4000);
-  await app.listen(port);
-  Logger.log(`🚀 ME_CBO API listening on http://localhost:${port}/${prefix}`, "Bootstrap");
-  Logger.log(`📚 Swagger: http://localhost:${port}/${prefix}/docs`, "Bootstrap");
+  await app.listen(port, "0.0.0.0");
+  Logger.log(`🚀 ME_CBO API listening on port ${port} (/${prefix}), trust proxy = ${hops}`, "Bootstrap");
 }
 
 bootstrap().catch((err) => {
