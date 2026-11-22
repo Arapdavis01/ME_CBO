@@ -1,44 +1,92 @@
 import {
+  ArrayMaxSize,
   IsArray,
   IsEmail,
-  IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   IsUrl,
+  Length,
+  Matches,
   MaxLength,
   MinLength,
 } from "class-validator";
+import { Transform } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import type { ApplicationStatus, Role, UserStatus } from "@prisma/client";
+
+const trim = () =>
+  Transform(({ value }) => (typeof value === "string" ? value.trim() : value));
+const lowerTrim = () =>
+  Transform(({ value }) =>
+    typeof value === "string" ? value.trim().toLowerCase() : value,
+  );
+const trimEach = () =>
+  Transform(({ value }) =>
+    Array.isArray(value)
+      ? value.map((v) => (typeof v === "string" ? v.trim() : v)).filter(Boolean)
+      : value,
+  );
+
+const ROLE_VALUES = [
+  "SUPER_ADMIN",
+  "OPERATIONS_ADMIN",
+  "FINANCE_ADMIN",
+  "TEAM_LEAD",
+  "MEMBER",
+] as const;
+
+const PHONE_RE = /^\+?[0-9 ()-]{7,20}$/;
+
+/** Avatars may only come from the storage hosts the web app is configured for. */
+const AVATAR_RE =
+  /^https:\/\/(res\.cloudinary\.com|me-cbo-assets\.s3\.amazonaws\.com)\//;
 
 /* ─── Public application ────────────────────────────────────── */
 
 export class SubmitApplicationDto {
   @ApiProperty()
+  @trim()
   @IsString() @MinLength(2) @MaxLength(120)
   fullName!: string;
 
   @ApiProperty()
-  @IsEmail()
+  @lowerTrim()
+  @IsEmail() @MaxLength(254)
   email!: string;
 
   @ApiProperty()
-  @IsString() @MinLength(7) @MaxLength(20)
+  @trim()
+  @IsString() @Matches(PHONE_RE, { message: "Enter a valid phone number" })
   phone!: string;
 
   @ApiProperty()
+  @trim()
   @IsString() @MinLength(20) @MaxLength(1000)
   motivation!: string;
 
   @ApiPropertyOptional({ type: [String] })
-  @IsOptional() @IsArray() @IsString({ each: true })
+  @IsOptional()
+  @trimEach()
+  @IsArray() @ArrayMaxSize(20)
+  @IsString({ each: true }) @MaxLength(40, { each: true })
   skills?: string[];
+}
+
+/** Body of POST /members/verify-email */
+export class VerifyEmailDto {
+  @ApiProperty()
+  @IsString()
+  @Length(64, 64)
+  @Matches(/^[a-f0-9]+$/, { message: "Invalid token" })
+  token!: string;
 }
 
 /* ─── Review ────────────────────────────────────────────────── */
 
 export class RejectApplicationDto {
   @ApiProperty()
+  @trim()
   @IsString() @MinLength(3) @MaxLength(500)
   note!: string;
 }
@@ -47,15 +95,15 @@ export class RejectApplicationDto {
 
 export class DirectoryQueryDto {
   @ApiPropertyOptional()
-  @IsOptional() @IsString() @MaxLength(120)
+  @IsOptional() @trim() @IsString() @MaxLength(120)
   q?: string;
 
   @ApiPropertyOptional()
-  @IsOptional() @IsString() @MaxLength(60)
+  @IsOptional() @trim() @IsString() @MaxLength(60)
   skill?: string;
 
-  @ApiPropertyOptional({ enum: ["SUPER_ADMIN","OPERATIONS_ADMIN","FINANCE_ADMIN","TEAM_LEAD","MEMBER"] })
-  @IsOptional() @IsEnum(["SUPER_ADMIN","OPERATIONS_ADMIN","FINANCE_ADMIN","TEAM_LEAD","MEMBER"] as const)
+  @ApiPropertyOptional({ enum: ROLE_VALUES })
+  @IsOptional() @IsIn(ROLE_VALUES)
   role?: Role;
 }
 
@@ -63,27 +111,33 @@ export class DirectoryQueryDto {
 
 export class UpdateProfileDto {
   @ApiPropertyOptional()
-  @IsOptional() @IsString() @MinLength(2) @MaxLength(120)
+  @IsOptional() @trim() @IsString() @MinLength(2) @MaxLength(120)
   fullName?: string;
 
   @ApiPropertyOptional()
-  @IsOptional() @IsString() @MaxLength(20)
+  @IsOptional() @trim() @IsString()
+  @Matches(PHONE_RE, { message: "Enter a valid phone number" })
   phone?: string;
 
   @ApiPropertyOptional()
-  @IsOptional() @IsString() @MaxLength(120)
+  @IsOptional() @trim() @IsString() @MaxLength(120)
   location?: string;
 
   @ApiPropertyOptional({ type: [String] })
-  @IsOptional() @IsArray() @IsString({ each: true })
+  @IsOptional()
+  @trimEach()
+  @IsArray() @ArrayMaxSize(20)
+  @IsString({ each: true }) @MaxLength(40, { each: true })
   skills?: string[];
 
   @ApiPropertyOptional()
-  @IsOptional() @IsString() @MaxLength(500)
+  @IsOptional() @trim() @IsString() @MaxLength(500)
   bio?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional() @IsUrl()
+  @ApiPropertyOptional({ description: "https URL on the app's Cloudinary or S3 storage" })
+  @IsOptional()
+  @IsUrl({ protocols: ["https"], require_protocol: true })
+  @Matches(AVATAR_RE, { message: "Avatar must be uploaded through the app" })
   avatarUrl?: string;
 }
 
