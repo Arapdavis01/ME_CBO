@@ -1,6 +1,14 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common";
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+} from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { PERMISSIONS_KEY } from "./decorators/permissions.decorator";
+import {
+  ANY_PERMISSIONS_KEY,
+  PERMISSIONS_KEY,
+} from "./decorators/permissions.decorator";
 import type { Permission } from "./permissions";
 import { permissionsFor } from "./permissions";
 import type { AuthedRequest } from "./auth.guard";
@@ -10,17 +18,29 @@ export class RbacGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(ctx: ExecutionContext): boolean {
-    const required = this.reflector.getAllAndOverride<Permission[]>(PERMISSIONS_KEY, [
-      ctx.getHandler(),
-      ctx.getClass(),
-    ]);
-    if (!required || required.length === 0) return true;
+    const targets = [ctx.getHandler(), ctx.getClass()];
+    const all = this.reflector.getAllAndOverride<Permission[] | undefined>(
+      PERMISSIONS_KEY,
+      targets,
+    );
+    const any = this.reflector.getAllAndOverride<Permission[] | undefined>(
+      ANY_PERMISSIONS_KEY,
+      targets,
+    );
+
+    const needsAll = !!all && all.length > 0;
+    const needsAny = !!any && any.length > 0;
+    if (!needsAll && !needsAny) return true;
 
     const req = ctx.switchToHttp().getRequest<AuthedRequest>();
-    const role = req.user?.role;
-    const held = permissionsFor(role);
-    const ok = required.every((p) => held.includes(p));
-    if (!ok) throw new ForbiddenException("Insufficient permissions");
+    const held = permissionsFor(req.user?.role);
+
+    if (needsAll && !all!.every((p) => held.includes(p))) {
+      throw new ForbiddenException("Insufficient permissions");
+    }
+    if (needsAny && !any!.some((p) => held.includes(p))) {
+      throw new ForbiddenException("Insufficient permissions");
+    }
     return true;
   }
 }
