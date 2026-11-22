@@ -2,11 +2,14 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { ApiTags, ApiCookieAuth, ApiOperation } from "@nestjs/swagger";
 import { MembersService } from "./members.service";
 import {
@@ -14,6 +17,7 @@ import {
   RejectApplicationDto,
   DirectoryQueryDto,
   UpdateProfileDto,
+  VerifyEmailDto,
 } from "./dto/members.dto";
 import { Public } from "../auth/decorators/public.decorator";
 import { RequirePermissions } from "../auth/decorators/permissions.decorator";
@@ -28,17 +32,62 @@ export class MembersPublicController {
   constructor(private readonly members: MembersService) {}
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post("applications")
+  @HttpCode(201)
   @ApiOperation({ summary: "Submit a membership application" })
   async submit(@Body() dto: SubmitApplicationDto) {
     return this.members.submitApplication(dto);
   }
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post("verify-email")
+  @HttpCode(200)
   @ApiOperation({ summary: "Verify email via token" })
-  async verify(@Body() body: { token: string }) {
+  async verify(@Body() body: VerifyEmailDto) {
     return this.members.verifyEmail(body.token);
+  }
+}
+
+/* ─── Admin routes ─────────────────────────────────────────── */
+/* Declared BEFORE MembersController in members.module.ts, so that
+   GET /members/applications is not captured by GET /members/:id. */
+
+@ApiTags("members")
+@ApiCookieAuth("me_access")
+@Controller("members/applications")
+export class MembersAdminController {
+  constructor(private readonly members: MembersService) {}
+
+  @Get()
+  @RequirePermissions("members:approve")
+  async list(@Query("status") status?: "PENDING" | "APPROVED" | "REJECTED") {
+    const items = await this.members.listApplications(status);
+    return { items };
+  }
+
+  @Post(":id/approve")
+  @HttpCode(200)
+  @RequirePermissions("members:approve")
+  async approve(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @CurrentUser() claims: AccessClaims,
+  ) {
+    const application = await this.members.approveApplication(id, claims.sub);
+    return { application };
+  }
+
+  @Post(":id/reject")
+  @HttpCode(200)
+  @RequirePermissions("members:approve")
+  async reject(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Body() dto: RejectApplicationDto,
+    @CurrentUser() claims: AccessClaims,
+  ) {
+    const application = await this.members.rejectApplication(id, claims.sub, dto);
+    return { application };
   }
 }
 
@@ -64,49 +113,15 @@ export class MembersController {
     return { member };
   }
 
-  @Get(":id")
-  async detail(@Param("id") id: string) {
-    const member = await this.members.memberDetail(id);
-    return { member };
-  }
-
   @Patch("me")
   async updateMe(@CurrentUser() claims: AccessClaims, @Body() dto: UpdateProfileDto) {
     const member = await this.members.updateProfile(claims.sub, dto);
     return { member };
   }
-}
 
-/* ─── Admin routes ─────────────────────────────────────────── */
-
-@ApiTags("members")
-@ApiCookieAuth("me_access")
-@Controller("members/applications")
-export class MembersAdminController {
-  constructor(private readonly members: MembersService) {}
-
-  @Get()
-  @RequirePermissions("members:approve")
-  async list(@Query("status") status?: "PENDING" | "APPROVED" | "REJECTED") {
-    const items = await this.members.listApplications(status);
-    return { items };
-  }
-
-  @Post(":id/approve")
-  @RequirePermissions("members:approve")
-  async approve(@Param("id") id: string, @CurrentUser() claims: AccessClaims) {
-    const application = await this.members.approveApplication(id, claims.sub);
-    return { application };
-  }
-
-  @Post(":id/reject")
-  @RequirePermissions("members:approve")
-  async reject(
-    @Param("id") id: string,
-    @Body() dto: RejectApplicationDto,
-    @CurrentUser() claims: AccessClaims,
-  ) {
-    const application = await this.members.rejectApplication(id, claims.sub, dto);
-    return { application };
+  @Get(":id")
+  async detail(@Param("id", new ParseUUIDPipe()) id: string) {
+    const member = await this.members.memberDetail(id);
+    return { member };
   }
 }
