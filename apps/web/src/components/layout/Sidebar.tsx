@@ -196,9 +196,9 @@ export function Sidebar({
       {/*  Desktop sidebar                                                 */}
       {/* ---------------------------------------------------------------- */}
       <aside className="no-print hidden w-60 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--bg-elevated)] lg:flex">
-        <div className="flex h-[var(--header-h)] items-center border-b border-[var(--border)] px-4">
+        <div className="flex items-center border-b border-[var(--border)] px-4 py-4">
           {/* The logo image already contains the name "ME CBO" */}
-          <Logo height={44} href="/dashboard" />
+          <Logo height={64} href="/dashboard" />
         </div>
         <div className="flex-1 overflow-y-auto">{nav}</div>
         <div className="border-t border-[var(--border)] px-4 py-3 text-[11px] text-[var(--fg-subtle)]">
@@ -236,8 +236,8 @@ export function Sidebar({
             mobileOpen ? "translate-x-0" : "-translate-x-full",
           )}
         >
-          <div className="flex h-[var(--header-h)] items-center justify-between border-b border-[var(--border)] px-4">
-            <Logo height={44} href="/dashboard" />
+          <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
+            <Logo height={56} href="/dashboard" />
             <button
               ref={closeBtnRef}
               type="button"
