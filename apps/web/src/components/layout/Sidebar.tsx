@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { Permission } from "@/lib/auth/permissions";
 import { siteConfig } from "@/config/site";
+import { Logo } from "@/components/ui/Logo";
 
 /* -------------------------------------------------------------------------- */
 /*  Nav model                                                                  */
@@ -145,6 +146,7 @@ export function Sidebar({
   /*  Auto-close the mobile drawer whenever the route changes.             */
   /*  This handles programmatic navigation (e.g. from a toast action),     */
   /*  browser back/forward, and deep links — not just link clicks.         */
+  /*  It also closes the drawer when the logo link is tapped.              */
   /* -------------------------------------------------------------------- */
   useEffect(() => {
     if (mobileOpen) onClose();
@@ -194,13 +196,9 @@ export function Sidebar({
       {/*  Desktop sidebar                                                 */}
       {/* ---------------------------------------------------------------- */}
       <aside className="no-print hidden w-60 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--bg-elevated)] lg:flex">
-        <div className="flex h-[var(--header-h)] items-center gap-2 border-b border-[var(--border)] px-4">
-          <span className="grid h-7 w-7 place-items-center rounded-full bg-[var(--primary)] text-[var(--primary-fg)]">
-            <Leaf className="h-4 w-4" aria-hidden />
-          </span>
-          <span className="truncate text-sm font-bold text-[var(--fg)]">
-            {siteConfig.shortName}
-          </span>
+        <div className="flex h-[var(--header-h)] items-center border-b border-[var(--border)] px-4">
+          {/* The logo image already contains the name "ME CBO" */}
+          <Logo height={44} href="/dashboard" />
         </div>
         <div className="flex-1 overflow-y-auto">{nav}</div>
         <div className="border-t border-[var(--border)] px-4 py-3 text-[11px] text-[var(--fg-subtle)]">
@@ -239,14 +237,7 @@ export function Sidebar({
           )}
         >
           <div className="flex h-[var(--header-h)] items-center justify-between border-b border-[var(--border)] px-4">
-            <span className="flex items-center gap-2">
-              <span className="grid h-7 w-7 place-items-center rounded-full bg-[var(--primary)] text-[var(--primary-fg)]">
-                <Leaf className="h-4 w-4" aria-hidden />
-              </span>
-              <span className="truncate text-sm font-bold text-[var(--fg)]">
-                {siteConfig.shortName}
-              </span>
-            </span>
+            <Logo height={44} href="/dashboard" />
             <button
               ref={closeBtnRef}
               type="button"
