@@ -36,7 +36,7 @@ export function Logo({ height = 40, href = "/", className, priority }: LogoProps
       height={height}
       priority={priority}
       className={className}
-      style={{ height, width: "auto" }}
+      style={{ height, width: "auto", maxWidth: "100%", objectFit: "contain" }}
     />
   );
 
