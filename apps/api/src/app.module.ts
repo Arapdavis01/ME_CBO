@@ -17,6 +17,7 @@ import { AuthModule } from "./auth/auth.module";
 import { UsersModule } from "./users/users.module";
 import { MembersModule } from "./members/members.module";
 import { EventsModule } from "./events/events.module";
+import { ImpactModule } from "./impact/impact.module";
 import { HealthModule } from "./health/health.module";
 
 /* ─── Cross-cutting concerns ─────────────────────────────────────── */
@@ -50,12 +51,13 @@ import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
     UsersModule,
     MembersModule,
     EventsModule,
+    ImpactModule,
     HealthModule,
 
     /* Add the remaining feature modules here as they are created
-       (impact, inventory, incidents, swap, learning, finance,
-       petitions, admin). A module that is not listed here has NO
-       routes, even if its files exist in the repo. */
+       (inventory, incidents, swap, learning, finance, petitions,
+       admin). A module that is not listed here has NO routes,
+       even if its files exist in the repo. */
   ],
 
   providers: [
