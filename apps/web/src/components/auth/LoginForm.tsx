@@ -20,6 +20,10 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+/** Extra response the API returns when an admin has not enrolled in MFA yet. */
+type MfaSetupRequired = { mfaSetupRequired: true; setupId: string };
+type LoginResponse = Awaited<ReturnType<typeof authApi.login>> | MfaSetupRequired;
+
 export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -39,7 +43,16 @@ export function LoginForm() {
   const onSubmit = async (values: FormValues) => {
     setSubmitting(true);
     try {
-      const result = await authApi.login(values);
+      const result = (await authApi.login(values)) as LoginResponse;
+
+      // Admin must enroll in two-factor authentication first.
+      if ("mfaSetupRequired" in result) {
+        sessionStorage.setItem("me_mfa_setup", result.setupId);
+        toast.info("Set up two-factor authentication to continue.");
+        router.push("/mfa/setup");
+        return;
+      }
+
       if (result.mfaRequired) {
         // Stash challenge in sessionStorage so the MFA page can read it
         sessionStorage.setItem("me_mfa_challenge", result.challengeId);
@@ -47,11 +60,14 @@ export function LoginForm() {
         router.push("/mfa/verify");
         return;
       }
+
       setUser(result.user);
       toast.success(`Welcome back, ${result.user.fullName.split(" ")[0]}!`);
       const next = params.get("next") || "/dashboard";
       router.replace(next);
     } catch (err) {
+      // Keep the real reason in the browser console for debugging.
+      console.error("Login error:", err);
       const msg =
         err instanceof ApiError
           ? err.status === 429
