@@ -35,13 +35,18 @@ import { PrismaService } from "../prisma/prisma.service";
 /**
  * Cookie options are read when a response is built (not at import time),
  * so values from .env / Render environment are always picked up.
- * Leave COOKIE_DOMAIN unset when the frontend proxies /api to this API.
+ *
+ * sameSite: "none" is REQUIRED when the frontend (Vercel) and API
+ * (Render) are on different origins. Browsers drop SameSite=Strict
+ * cookies on cross-origin requests, causing login to succeed but
+ * cookies to silently not stick. SameSite=None requires Secure=true,
+ * which is why COOKIE_SECURE must be "true" in production.
  */
 function cookieBase() {
   return {
     httpOnly: true as const,
     secure: process.env.COOKIE_SECURE === "true",
-    sameSite: "strict" as const,
+    sameSite: "none" as const,
     domain: process.env.COOKIE_DOMAIN || undefined,
   };
 }
