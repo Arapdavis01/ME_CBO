@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { Leaf } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
 import { siteConfig } from "@/config/site";
 
 export function AuthShell({
@@ -16,17 +15,10 @@ export function AuthShell({
   return (
     <main className="flex min-h-[100dvh] flex-col bg-[var(--bg)]">
       <div className="container-mobile flex flex-1 flex-col justify-center py-8 sm:py-12">
-        <Link
-          href="/"
-          className="mx-auto mb-6 inline-flex items-center gap-2 focus-ring rounded-md"
-        >
-          <span className="grid h-10 w-10 place-items-center rounded-full bg-[var(--primary)] text-[var(--primary-fg)]">
-            <Leaf className="h-5 w-5" aria-hidden />
-          </span>
-          <span className="text-sm font-bold text-[var(--fg)]">
-            {siteConfig.shortName}
-          </span>
-        </Link>
+        {/* The logo image already contains the name "ME CBO" */}
+        <div className="mx-auto mb-6 flex justify-center">
+          <Logo height={56} priority />
+        </div>
 
         <div className="mx-auto w-full max-w-md rounded-card border border-[var(--border)] bg-[var(--bg-elevated)] p-5 shadow-geo sm:p-7">
           <h1 className="text-2xl text-[var(--fg)]">{title}</h1>
