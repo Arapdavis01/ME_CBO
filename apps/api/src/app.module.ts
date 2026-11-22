@@ -15,6 +15,7 @@ import { StorageModule } from "./storage/storage.module";
 /* ─── Feature modules ────────────────────────────────────────────── */
 import { AuthModule } from "./auth/auth.module";
 import { UsersModule } from "./users/users.module";
+import { MembersModule } from "./members/members.module";
 import { EventsModule } from "./events/events.module";
 import { HealthModule } from "./health/health.module";
 
@@ -47,8 +48,14 @@ import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
     /* ─── Domain modules ──────────────────────────────────────── */
     AuthModule,
     UsersModule,
+    MembersModule,
     EventsModule,
     HealthModule,
+
+    /* Add the remaining feature modules here as they are created
+       (impact, inventory, incidents, swap, learning, finance,
+       petitions, admin). A module that is not listed here has NO
+       routes, even if its files exist in the repo. */
   ],
 
   providers: [
