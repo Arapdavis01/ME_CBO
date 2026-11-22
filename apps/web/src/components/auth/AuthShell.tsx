@@ -17,7 +17,7 @@ export function AuthShell({
       <div className="container-mobile flex flex-1 flex-col justify-center py-8 sm:py-12">
         {/* The logo image already contains the name "ME CBO" */}
         <div className="mx-auto mb-6 flex justify-center">
-          <Logo height={56} priority />
+          <Logo height={120} priority />
         </div>
 
         <div className="mx-auto w-full max-w-md rounded-card border border-[var(--border)] bg-[var(--bg-elevated)] p-5 shadow-geo sm:p-7">
