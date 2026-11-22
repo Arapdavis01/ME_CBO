@@ -5,7 +5,7 @@
   "description": "ME_CBO — Mosoriot Environmental Community-Based Organization web platform",
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=20.11.0 <21",
+    "node": "24.x",
     "pnpm": ">=9.0.0"
   },
   "packageManager": "pnpm@9.7.0",
