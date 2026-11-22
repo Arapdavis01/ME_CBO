@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Leaf, Menu, X } from "lucide-react";
-import { siteConfig, publicNav } from "@/config/site";
+import { Menu, X } from "lucide-react";
+import { publicNav } from "@/config/site";
 import { Button } from "@/components/ui/Button";
+import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/utils";
 
 export function SiteHeader() {
@@ -13,19 +14,8 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--border)] glass no-print">
       <div className="container-mobile flex h-[var(--header-h)] items-center justify-between gap-3">
-        <Link href="/" className="flex items-center gap-2 focus-ring rounded-md">
-          <span className="grid h-9 w-9 place-items-center rounded-full bg-[var(--primary)] text-[var(--primary-fg)]">
-            <Leaf className="h-5 w-5" aria-hidden />
-          </span>
-          <span className="flex flex-col leading-tight">
-            <span className="text-sm font-bold text-[var(--fg)]">
-              {siteConfig.shortName}
-            </span>
-            <span className="hidden text-[11px] text-[var(--fg-subtle)] xs:block">
-              Mosoriot Environmental CBO
-            </span>
-          </span>
-        </Link>
+        {/* The logo image already contains the name "ME CBO" */}
+        <Logo height={44} priority />
 
         {/* Desktop nav */}
         <nav aria-label="Main" className="hidden md:flex items-center gap-1">
