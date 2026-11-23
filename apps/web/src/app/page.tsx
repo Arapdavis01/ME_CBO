@@ -1,35 +1,41 @@
+// apps/web/src/app/page.tsx
 import Link from "next/link";
-import { Leaf, TreePine, Recycle, Users, ArrowRight } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarCheck,
+  Droplets,
+  GraduationCap,
+  Leaf,
+  LogIn,
+  Recycle,
+  ShieldCheck,
+  TreePine,
+  UserPlus,
+  Award,
+} from "lucide-react";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { siteConfig } from "@/config/site";
 
-const stats = [
-  { label: "Trees planted", value: "12,480", icon: TreePine },
-  { label: "Waste collected", value: "8.2t", icon: Recycle },
-  { label: "Active members", value: "340+", icon: Users },
+const pillars = [
+  { title: "Tree planting", text: "Indigenous and fruit trees grown with schools, farms and households.", icon: TreePine },
+  { title: "Clean-ups & recycling", text: "Community clean-ups and reuse that keep waste out of our rivers and fields.", icon: Recycle },
+  { title: "Water & soil", text: "Protecting riverbanks and restoring degraded land around Mosoriot.", icon: Droplets },
+  { title: "Environmental learning", text: "Training that helps young people and families care for their surroundings.", icon: GraduationCap },
+];
+
+const steps = [
+  { title: "Apply", text: "Tell us about yourself and why you want to join.", icon: UserPlus },
+  { title: "Get approved", text: "Our team reviews your application and sends you an email to set your password.", icon: ShieldCheck },
+  { title: "Take part", text: "Join field events, record your work and earn recognition for your impact.", icon: CalendarCheck },
 ];
 
 const actions = [
-  {
-    title: "Join a clean-up",
-    text: "Find a field event near Mosoriot and RSVP in one tap.",
-    href: "/events",
-    cta: "View events",
-  },
-  {
-    title: "Plant with us",
-    text: "Sponsor a seedling or join a reforestation drive.",
-    href: "/donate",
-    cta: "Donate",
-  },
-  {
-    title: "Become a member",
-    text: "Volunteer your skills and track your impact.",
-    href: "/apply",
-    cta: "Apply now",
-  },
+  { title: "Become a member", text: "Volunteer your time and skills with us.", href: "/apply", cta: "Apply now" },
+  { title: "Support our work", text: "Help fund seedlings, tools and training.", href: "/donate", cta: "Donate" },
+  { title: "Read our stories", text: "News from our work in the community.", href: "/blog", cta: "Visit the blog" },
 ];
 
 export default function HomePage() {
@@ -37,9 +43,9 @@ export default function HomePage() {
     <>
       <SiteHeader />
       <main className="pb-safe">
-        {/* Hero — mobile-first stacked layout */}
+        {/* Hero */}
         <section className="relative overflow-hidden bg-[var(--primary)] text-white">
-          <div className="container-mobile flex flex-col gap-6 py-10 sm:py-16 md:flex-row md:items-center md:gap-10">
+          <div className="container-mobile flex flex-col gap-8 py-12 sm:py-20 md:flex-row md:items-center md:gap-12">
             <div className="max-w-xl">
               <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur">
                 <Leaf className="h-3.5 w-3.5" aria-hidden />
@@ -51,13 +57,12 @@ export default function HomePage() {
               </h1>
               <p className="mt-3 max-w-prose text-white/80">
                 {siteConfig.fullName} brings neighbours together to restore
-                Mosoriot&apos;s ecosystems — one tree, one clean-up, one
-                community at a time.
+                Mosoriot&apos;s ecosystems: one tree, one clean-up, one community at a time.
               </p>
               <div className="mt-6 flex flex-col gap-3 xs:flex-row">
                 <Link href="/apply" className="xs:w-auto">
                   <Button size="lg" fullWidth>
-                    Join ME_CBO <ArrowRight className="h-4 w-4" />
+                    Join ME_CBO <ArrowRight className="h-4 w-4" aria-hidden />
                   </Button>
                 </Link>
                 <Link href="/donate" className="xs:w-auto">
@@ -68,54 +73,95 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 xs:grid-cols-3 md:w-[42%]">
-              {stats.map(({ label, value, icon: Icon }) => (
-                <div
-                  key={label}
-                  className="rounded-card bg-white/10 p-4 backdrop-blur"
-                >
-                  <Icon className="h-5 w-5 text-[var(--me-leaf-400)]" aria-hidden />
-                  <p className="mt-2 text-2xl font-bold text-white">{value}</p>
-                  <p className="text-xs text-white/70">{label}</p>
-                </div>
-              ))}
+            {/* Member portal entrance */}
+            <div className="md:w-[38%]">
+              <div className="rounded-card bg-white/10 p-6 backdrop-blur">
+                <LogIn className="h-6 w-6 text-[var(--me-leaf-400)]" aria-hidden />
+                <h2 className="mt-3 text-xl font-semibold text-white">Member portal</h2>
+                <p className="mt-1 text-sm text-white/75">
+                  Members and officials sign in to see events, record their impact and manage the organisation.
+                </p>
+                <Link href="/login" className="mt-4 block">
+                  <Button size="lg" variant="secondary" fullWidth>
+                    Sign in
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Actions — single column on phones */}
-        <section className="container-mobile py-10 sm:py-14">
-          <h2 className="text-[var(--fg)]">Get involved</h2>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {actions.map((a) => (
-              <Card key={a.title} className="flex flex-col p-5">
-                <h3 className="text-[var(--fg)]">{a.title}</h3>
-                <p className="mt-2 flex-1 text-sm text-[var(--fg-muted)]">
-                  {a.text}
-                </p>
-                <Link href={a.href} className="mt-4">
-                  <Button variant="outline" fullWidth>
-                    {a.cta}
-                  </Button>
-                </Link>
+        {/* Trust strip */}
+        <section className="border-b border-[var(--border)] bg-[var(--bg-muted)]">
+          <div className="container-mobile flex items-center gap-2 py-3 text-sm text-[var(--fg-muted)]">
+            <ShieldCheck className="h-4 w-4 shrink-0 text-[var(--primary)]" aria-hidden />
+            <p>{siteConfig.registration.status}.</p>
+          </div>
+        </section>
+
+        {/* What we do */}
+        <section className="container-mobile py-12 sm:py-16" aria-labelledby="what-we-do">
+          <h2 id="what-we-do" className="text-[var(--fg)]">What we do</h2>
+          <p className="mt-2 max-w-2xl text-[var(--fg-muted)]">
+            Practical work that people in Mosoriot can see and take part in.
+          </p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {pillars.map(({ title, text, icon: Icon }) => (
+              <Card key={title} className="p-5">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[var(--primary)]/10 text-[var(--primary)]">
+                  <Icon className="h-5 w-5" aria-hidden />
+                </span>
+                <h3 className="mt-4 text-[var(--fg)]">{title}</h3>
+                <p className="mt-2 text-sm text-[var(--fg-muted)]">{text}</p>
               </Card>
             ))}
           </div>
         </section>
 
-        {/* Contact strip */}
-        <section className="border-t border-[var(--border)] bg-[var(--bg-muted)]">
-          <div className="container-mobile flex flex-col gap-2 py-6 text-sm text-[var(--fg-muted)] sm:flex-row sm:items-center sm:justify-between">
-            <p>{siteConfig.contact.address}</p>
-            <a
-              href={`tel:${siteConfig.contact.phoneTel}`}
-              className="font-semibold text-[var(--primary)] focus-ring rounded"
-            >
-              {siteConfig.contact.phone}
-            </a>
+        {/* How it works */}
+        <section className="bg-[var(--bg-muted)] py-12 sm:py-16" aria-labelledby="how">
+          <div className="container-mobile">
+            <h2 id="how" className="text-[var(--fg)]">How to join</h2>
+            <ol className="mt-8 grid gap-4 md:grid-cols-3">
+              {steps.map(({ title, text, icon: Icon }, i) => (
+                <li key={title}>
+                  <Card className="h-full p-5">
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--primary)] text-sm font-bold text-[var(--primary-fg)]">
+                        {i + 1}
+                      </span>
+                      <Icon className="h-5 w-5 text-[var(--primary)]" aria-hidden />
+                    </div>
+                    <h3 className="mt-3 text-[var(--fg)]">{title}</h3>
+                    <p className="mt-1 text-sm text-[var(--fg-muted)]">{text}</p>
+                  </Card>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-6 flex items-center gap-2 text-sm text-[var(--fg-muted)]">
+              <Award className="h-4 w-4 text-[var(--primary)]" aria-hidden />
+              Active members can earn badges and certificates for their volunteer work.
+            </p>
+          </div>
+        </section>
+
+        {/* Get involved */}
+        <section className="container-mobile py-12 sm:py-16" aria-labelledby="involved">
+          <h2 id="involved" className="text-[var(--fg)]">Get involved</h2>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {actions.map((a) => (
+              <Card key={a.title} className="flex flex-col p-5">
+                <h3 className="text-[var(--fg)]">{a.title}</h3>
+                <p className="mt-2 flex-1 text-sm text-[var(--fg-muted)]">{a.text}</p>
+                <Link href={a.href} className="mt-4">
+                  <Button variant="outline" fullWidth>{a.cta}</Button>
+                </Link>
+              </Card>
+            ))}
           </div>
         </section>
       </main>
+      <SiteFooter />
     </>
   );
 }
