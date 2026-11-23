@@ -15,8 +15,8 @@ export function SiteHeaderClient({ signedIn }: { signedIn: boolean }) {
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--border)] glass no-print">
       <div className="container-mobile flex h-[var(--header-h)] items-center justify-between gap-3">
-        {/* The logo image already contains the name "ME CBO" */}
-        <Logo height={44} priority />
+        {/* The wordmark inside the picture is small here, so the short name sits beside it */}
+        <Logo height={52} showName priority />
 
         {/* Desktop nav */}
         <nav aria-label="Main" className="hidden md:flex items-center gap-1">
