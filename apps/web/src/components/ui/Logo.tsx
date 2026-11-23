@@ -1,3 +1,4 @@
+// apps/web/src/components/ui/Logo.tsx
 import Image from "next/image";
 import Link from "next/link";
 
@@ -9,41 +10,59 @@ type LogoProps = {
   className?: string;
   /** Load immediately (use for the logo above the fold, e.g. header / login). */
   priority?: boolean;
+  /**
+   * Show "ME_CBO" next to the picture. Use it in small spots (header, top bar),
+   * where the name inside the logo is too small to read.
+   */
+  showName?: boolean;
 };
 
 /**
- * ME_CBO logo. The image already contains the name "ME CBO",
- * so no text is rendered next to it.
- *
- * File: apps/web/public/logo.png
- * If your file has another name or format (logo.svg, logo.jpg), change LOGO_SRC.
+ * ME_CBO logo: apps/web/public/logo.png (500 x 500).
+ * If you replace the file with one of another size, update the two numbers below.
  */
 const LOGO_SRC = "/logo.png";
+const LOGO_WIDTH = 500;
+const LOGO_HEIGHT = 500;
 
-// Intrinsic size of the file. Set these to your image's real width and height
-// (right-click the file → Properties → Details) so it is not distorted.
-const LOGO_WIDTH = 600;
-const LOGO_HEIGHT = 200;
-
-export function Logo({ height = 40, href = "/", className, priority }: LogoProps) {
+export function Logo({
+  height = 40,
+  href = "/",
+  className,
+  priority,
+  showName = false,
+}: LogoProps) {
   const width = Math.round((LOGO_WIDTH / LOGO_HEIGHT) * height);
 
-  const img = (
-    <Image
-      src={LOGO_SRC}
-      alt="ME CBO"
-      width={width}
-      height={height}
-      priority={priority}
-      className={className}
-      style={{ height, width: "auto", maxWidth: "100%", objectFit: "contain" }}
-    />
+  const content = (
+    <>
+      <Image
+        src={LOGO_SRC}
+        alt={showName ? "" : "Mosoriot Environmental CBO"}
+        width={width}
+        height={height}
+        priority={priority}
+        className={className}
+        style={{ height, width: "auto", maxWidth: "100%", objectFit: "contain" }}
+      />
+      {showName && (
+        <span className="font-display text-lg font-bold tracking-tight text-[var(--primary)]">
+          ME_CBO
+        </span>
+      )}
+    </>
   );
 
-  if (href === null) return img;
+  if (href === null) {
+    return <span className="inline-flex items-center gap-2">{content}</span>;
+  }
   return (
-    <Link href={href} aria-label="ME CBO home" className="inline-flex items-center">
-      {img}
+    <Link
+      href={href}
+      aria-label="Mosoriot Environmental CBO home"
+      className="inline-flex items-center gap-2"
+    >
+      {content}
     </Link>
   );
 }
