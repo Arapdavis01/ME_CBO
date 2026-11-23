@@ -64,7 +64,16 @@ export function SiteFooter() {
 
       <div className="border-t border-[var(--border)]">
         <p className="container-mobile py-4 text-xs text-[var(--fg-subtle)]">
-          © {year} {siteConfig.fullName}. All rights reserved.
+          © {year} {siteConfig.fullName}. All rights reserved.{" "}
+          Powered by{" "}
+          <a
+            href="https://qoechtechnologies.co.ke/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-[var(--primary)] hover:underline focus-ring rounded"
+          >
+            Qoech Technologies
+          </a>
         </p>
       </div>
     </footer>
