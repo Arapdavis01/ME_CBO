@@ -1,3 +1,4 @@
+// apps/web/src/config/site.ts
 /**
  * ME_CBO — Mosoriot Environmental Community-Based Organization
  * Single source of truth for identity, contact & navigation.
@@ -16,6 +17,16 @@ export const siteConfig = {
     email: "info@mecbo.org",
     location: "Mosoriot, Nandi County, Kenya",
   },
+  /**
+   * Legal standing. Fill in `registrationNumber` and `registeredYear` from your
+   * registration certificate; they only appear on the site once they are set.
+   */
+  registration: {
+    status: "Registered community-based organisation under the County Government of Nandi",
+    authority: "County Government of Nandi",
+    registrationNumber: "", // e.g. the number on your certificate
+    registeredYear: "", // e.g. "2023"
+  },
   colors: {
     forest: "#14532d",
     leaf: "#22c55e",
@@ -33,7 +44,6 @@ export type NavItem = {
 export const publicNav: NavItem[] = [
   { label: "Home", href: "/", icon: "Home" },
   { label: "About", href: "/about", icon: "Info" },
-  { label: "Impact", href: "/impact", icon: "Leaf" },
   { label: "Blog", href: "/blog", icon: "Newspaper" },
   { label: "Donate", href: "/donate", icon: "HeartHandshake" },
 ];
