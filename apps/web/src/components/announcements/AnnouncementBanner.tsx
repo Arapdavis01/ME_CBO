@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { NoticeBar } from "./NoticeBar";
+import { api } from "@/lib/api/client";
 import type { AnnouncementKind } from "@/lib/api/announcements.api";
 
 type PublicNotice = {
@@ -27,8 +28,8 @@ function readDismissed(): string | null {
 
 /**
  * Site-wide notice, shown on every page (website, sign-in, dashboard).
- * Admins control it from the dashboard. A visitor can close it; it comes back
- * only when the notice is changed.
+ * Admins control it from the dashboard. A visitor can close it; it comes
+ * back only when the notice is changed.
  */
 export function AnnouncementBanner() {
   const [notice, setNotice] = useState<PublicNotice | null>(null);
@@ -36,12 +37,12 @@ export function AnnouncementBanner() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/public/announcement", { cache: "no-store" });
-      if (!res.ok) return;
-      const data = (await res.json()) as { announcement: PublicNotice | null };
+      const data = await api.get<{ announcement: PublicNotice | null }>(
+        "/public/announcement",
+      );
       setNotice(data.announcement);
     } catch {
-      /* offline or API asleep: keep what we have */
+      /* offline, API asleep, or endpoint not deployed: keep what we have */
     }
   }, []);
 
