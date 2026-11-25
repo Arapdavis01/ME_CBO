@@ -392,3 +392,28 @@ model Project {
 
   @@index([status, phase])
 }
+// Paste at the END of apps/api/prisma/schema.prisma
+
+/// ============================================================
+/// Site-wide notices (e.g. "update tonight 10 PM - 12 AM")
+/// ============================================================
+enum AnnouncementKind {
+  INFO
+  MAINTENANCE
+  WARNING
+}
+
+model Announcement {
+  id          String           @id @default(uuid()) @db.Uuid
+  kind        AnnouncementKind @default(INFO)
+  message     String
+  showFrom    DateTime         @default(now())
+  windowStart DateTime?
+  windowEnd   DateTime?
+  active      Boolean          @default(true)
+  createdById String           @db.Uuid
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([active, showFrom])
+}
