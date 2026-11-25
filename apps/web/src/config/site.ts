@@ -14,7 +14,7 @@ export const siteConfig = {
     address: "P.O. Box 3, Mosoriot, Kenya",
     phone: "0741 835 028",
     phoneTel: "+254741835028",
-    email: "info@mecbo.org",
+    email: "mosoriotenvironmentalcbo@gmail.com",
     location: "Mosoriot, Nandi County, Kenya",
   },
   /**
