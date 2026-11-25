@@ -1,6 +1,7 @@
 /**
  * Frontend RBAC mirror of the NestJS backend permission matrix.
  * Defense-in-depth ONLY — the API enforces the same rules server-side.
+ * Keep this file identical to apps/api/src/auth/permissions.ts.
  */
 export type Role =
   | "SUPER_ADMIN"
@@ -22,7 +23,9 @@ export type Permission =
   | "impact:log"
   | "impact:certificate:issue"
   | "members:read"
+  | "members:directory"
   | "members:approve"
+  | "members:create"
   | "members:manage"
   | "inventory:read"
   | "inventory:checkout"
@@ -42,7 +45,9 @@ export type Permission =
   | "admin:roles:manage"
   | "admin:audit:read"
   | "admin:settings:manage"
-  | "petitions:manage";
+  | "petitions:manage"
+  | "projects:manage"
+  | "announcements:manage";
 
 const ROLES: Record<Role, Permission[]> = {
   SUPER_ADMIN: [
@@ -57,7 +62,9 @@ const ROLES: Record<Role, Permission[]> = {
     "impact:log",
     "impact:certificate:issue",
     "members:read",
+    "members:directory",
     "members:approve",
+    "members:create",
     "members:manage",
     "inventory:read",
     "inventory:checkout",
@@ -78,6 +85,8 @@ const ROLES: Record<Role, Permission[]> = {
     "admin:audit:read",
     "admin:settings:manage",
     "petitions:manage",
+    "projects:manage",
+    "announcements:manage",
   ],
   OPERATIONS_ADMIN: [
     "events:read",
@@ -90,7 +99,9 @@ const ROLES: Record<Role, Permission[]> = {
     "impact:read:all",
     "impact:certificate:issue",
     "members:read",
+    "members:directory",
     "members:approve",
+    "members:create",
     "inventory:read",
     "incidents:read",
     "incidents:create",
@@ -99,12 +110,15 @@ const ROLES: Record<Role, Permission[]> = {
     "learning:read",
     "learning:manage",
     "petitions:manage",
+    "projects:manage",
+    "announcements:manage",
   ],
   FINANCE_ADMIN: [
     "events:read",
     "impact:read",
     "impact:read:all",
     "members:read",
+    "members:directory",
     "inventory:read",
     "inventory:approve",
     "finance:read",
