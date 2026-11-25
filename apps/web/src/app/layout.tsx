@@ -3,6 +3,7 @@ import { Inter, Sora } from "next/font/google";
 import "@/styles/globals.css";
 import { AppProviders } from "@/components/providers/AppProviders";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
+import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
 import { siteConfig } from "@/config/site";
 
 /* -------------------------------------------------------------------------- */
@@ -206,6 +207,9 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
+
+        {/* Site-wide notice (e.g. planned update). Controlled from the dashboard. */}
+        <AnnouncementBanner />
 
         {/* PWA service worker — registers after load */}
         <ServiceWorkerRegister />
