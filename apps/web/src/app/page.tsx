@@ -17,7 +17,13 @@ import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { EventCard } from "@/components/public/EventCard";
+import { ProjectCard } from "@/components/public/ProjectCard";
+import { getPublicEvents, getPublicProjects } from "@/lib/public/public.api";
 import { siteConfig } from "@/config/site";
+
+// What admins publish appears here within about a minute.
+export const revalidate = 60;
 
 const pillars = [
   { title: "Tree planting", text: "Indigenous and fruit trees grown with schools, farms and households.", icon: TreePine },
@@ -38,7 +44,11 @@ const actions = [
   { title: "Read our stories", text: "News from our work in the community.", href: "/blog", cta: "Visit the blog" },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [{ upcoming }, projects] = await Promise.all([getPublicEvents(), getPublicProjects()]);
+  const nextEvents = upcoming.slice(0, 3);
+  const latestProjects = projects.slice(0, 3);
+
   return (
     <>
       <SiteHeader />
@@ -117,6 +127,36 @@ export default function HomePage() {
             ))}
           </div>
         </section>
+
+        {/* Upcoming events (from the dashboard) */}
+        {nextEvents.length > 0 && (
+          <section className="container-mobile pb-12 sm:pb-16" aria-labelledby="events">
+            <div className="flex items-end justify-between gap-4">
+              <h2 id="events" className="text-[var(--fg)]">Upcoming events</h2>
+              <Link href="/community-events" className="text-sm font-semibold text-[var(--primary)] hover:underline">
+                See all events
+              </Link>
+            </div>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {nextEvents.map((e) => <EventCard key={e.id} event={e} />)}
+            </div>
+          </section>
+        )}
+
+        {/* Projects (from the dashboard) */}
+        {latestProjects.length > 0 && (
+          <section className="container-mobile pb-12 sm:pb-16" aria-labelledby="projects">
+            <div className="flex items-end justify-between gap-4">
+              <h2 id="projects" className="text-[var(--fg)]">Our projects</h2>
+              <Link href="/projects" className="text-sm font-semibold text-[var(--primary)] hover:underline">
+                See all projects
+              </Link>
+            </div>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {latestProjects.map((p) => <ProjectCard key={p.id} project={p} />)}
+            </div>
+          </section>
+        )}
 
         {/* How it works */}
         <section className="bg-[var(--bg-muted)] py-12 sm:py-16" aria-labelledby="how">
