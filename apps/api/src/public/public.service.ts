@@ -32,6 +32,16 @@ export type PublicProject = {
 };
 
 const TTL_MS = 30_000;
+const NOTICE_TTL_MS = 10_000;
+
+export type PublicAnnouncement = {
+  id: string;
+  kind: "INFO" | "MAINTENANCE" | "WARNING";
+  message: string;
+  windowStart: string | null;
+  windowEnd: string | null;
+  updatedAt: string;
+};
 
 /**
  * Read-only data for the public website. Only published content leaves here,
@@ -45,12 +55,41 @@ export class PublicService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  private async cached<T>(key: string, load: () => Promise<T>): Promise<T> {
+  private async cached<T>(key: string, load: () => Promise<T>, ttl = TTL_MS): Promise<T> {
     const hit = this.cache.get(key);
-    if (hit && Date.now() - hit.at < TTL_MS) return hit.value as T;
+    if (hit && Date.now() - hit.at < ttl) return hit.value as T;
     const value = await load();
     this.cache.set(key, { at: Date.now(), value });
     return value;
+  }
+
+  /** The notice currently shown in the site banner, or null. */
+  announcement(): Promise<PublicAnnouncement | null> {
+    return this.cached(
+      "announcement",
+      async () => {
+        const now = new Date();
+        const row = await this.prisma.announcement.findFirst({
+          where: {
+            active: true,
+            showFrom: { lte: now },
+            OR: [{ windowEnd: null }, { windowEnd: { gte: now } }],
+          },
+          orderBy: { showFrom: "desc" },
+        });
+        return row
+          ? {
+              id: row.id,
+              kind: row.kind,
+              message: row.message,
+              windowStart: row.windowStart?.toISOString() ?? null,
+              windowEnd: row.windowEnd?.toISOString() ?? null,
+              updatedAt: row.updatedAt.toISOString(),
+            }
+          : null;
+      },
+      NOTICE_TTL_MS,
+    );
   }
 
   /** Upcoming and ongoing events, plus the most recent completed ones. */
