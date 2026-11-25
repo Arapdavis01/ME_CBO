@@ -21,6 +21,12 @@ const CACHE = "public, max-age=30, s-maxage=60, stale-while-revalidate=300";
 export class PublicController {
   constructor(private readonly content: PublicService) {}
 
+  @Get("announcement")
+  @Header("Cache-Control", "public, max-age=10, s-maxage=10")
+  async announcement() {
+    return { announcement: await this.content.announcement() };
+  }
+
   @Get("events")
   @Header("Cache-Control", CACHE)
   events() {
