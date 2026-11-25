@@ -12,7 +12,8 @@ export type Permission =
   | "finance:read" | "finance:manage" | "finance:approve" | "donations:read"
   | "admin:users:manage" | "admin:roles:manage" | "admin:audit:read" | "admin:settings:manage"
   | "petitions:manage"
-  | "projects:manage";
+  | "projects:manage"
+  | "announcements:manage";
 
 const ROLES: Record<Role, Permission[]> = {
   SUPER_ADMIN: [
@@ -24,14 +25,14 @@ const ROLES: Record<Role, Permission[]> = {
     "swap:read","swap:create","learning:read","learning:manage",
     "finance:read","finance:manage","finance:approve","donations:read",
     "admin:users:manage","admin:roles:manage","admin:audit:read","admin:settings:manage",
-    "petitions:manage","projects:manage",
+    "petitions:manage","projects:manage","announcements:manage",
   ],
   OPERATIONS_ADMIN: [
     "events:read","events:create","events:update","events:delete","events:checkin","events:proof:verify",
     "impact:read","impact:read:all","impact:certificate:issue",
     "members:read","members:directory","members:approve","members:create",
     "inventory:read","incidents:read","incidents:create","incidents:resolve",
-    "swap:read","learning:read","learning:manage","petitions:manage","projects:manage",
+    "swap:read","learning:read","learning:manage","petitions:manage","projects:manage","announcements:manage",
   ],
   FINANCE_ADMIN: [
     "events:read","impact:read","impact:read:all","members:read","members:directory",
