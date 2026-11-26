@@ -13,7 +13,6 @@ import {
   Repeat,
   BookOpen,
   Wallet,
-  UserPlus,
   Briefcase,
   Megaphone,
   X,
@@ -53,7 +52,6 @@ const items: Item[] = [
     icon: Wallet,
     anyOf: ["finance:read", "donations:read"],
   },
-  { label: "Add member", href: "/members/new", icon: UserPlus, permission: "members:create" },
   { label: "Projects", href: "/admin/projects", icon: Briefcase, permission: "projects:manage" },
   { label: "Site notices", href: "/admin/announcements", icon: Megaphone, permission: "announcements:manage" },
 ];
