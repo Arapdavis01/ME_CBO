@@ -13,7 +13,9 @@ import {
   Repeat,
   BookOpen,
   Wallet,
-  ShieldCheck,
+  UserPlus,
+  Briefcase,
+  Megaphone,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -51,7 +53,9 @@ const items: Item[] = [
     icon: Wallet,
     anyOf: ["finance:read", "donations:read"],
   },
-  { label: "Admin", href: "/admin", icon: ShieldCheck, permission: "admin:users:manage" },
+  { label: "Add member", href: "/members/new", icon: UserPlus, permission: "members:create" },
+  { label: "Projects", href: "/admin/projects", icon: Briefcase, permission: "projects:manage" },
+  { label: "Site notices", href: "/admin/announcements", icon: Megaphone, permission: "announcements:manage" },
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -159,10 +163,16 @@ export function Sidebar({
     return true;
   };
 
+  const visibleItems = items.filter(isVisible);
+  // Longest matching prefix wins, so /members/new does not also light up /members.
+  const activeHref = visibleItems
+    .filter((i) => pathname === i.href || pathname.startsWith(`${i.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+
   const nav = (
     <nav className="flex flex-col gap-1 p-3" aria-label="Workspace">
-      {items.filter(isVisible).map(({ label, href, icon: Icon }) => {
-        const active = pathname === href || pathname.startsWith(`${href}/`);
+      {visibleItems.map(({ label, href, icon: Icon }) => {
+        const active = href === activeHref;
         return (
           <Link
             key={href}
