@@ -30,6 +30,7 @@ export type Permission =
   | "inventory:read"
   | "inventory:checkout"
   | "inventory:approve"
+  | "inventory:manage"
   | "incidents:read"
   | "incidents:create"
   | "incidents:resolve"
@@ -69,6 +70,7 @@ const ROLES: Record<Role, Permission[]> = {
     "inventory:read",
     "inventory:checkout",
     "inventory:approve",
+    "inventory:manage",
     "incidents:read",
     "incidents:create",
     "incidents:resolve",
@@ -103,6 +105,9 @@ const ROLES: Record<Role, Permission[]> = {
     "members:approve",
     "members:create",
     "inventory:read",
+    "inventory:checkout",
+    "inventory:approve",
+    "inventory:manage",
     "incidents:read",
     "incidents:create",
     "incidents:resolve",
