@@ -1,10 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useEvents } from "@/hooks/useEvents";
+import { usePermissions } from "@/hooks/usePermissions";
 import { EventCard } from "@/components/events/EventCard";
 import { Card, CardBody } from "@/components/ui/Card";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const filters = ["All", "CLEANUP", "PLANTING", "AWARENESS", "MEETING"] as const;
@@ -12,6 +15,7 @@ type Filter = (typeof filters)[number];
 
 export default function EventsPage() {
   const { data, isLoading } = useEvents();
+  const { can } = usePermissions();
   const [filter, setFilter] = useState<Filter>("All");
 
   const items = useMemo(() => {
@@ -26,6 +30,13 @@ export default function EventsPage() {
           <h1 className="text-[var(--fg)]">Events</h1>
           <p className="text-sm text-[var(--fg-muted)]">Join a field activity near you.</p>
         </div>
+        {can("events:create") && (
+          <Link href="/events/new">
+            <Button size="sm">
+              <Plus className="h-4 w-4" /> Create event
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Horizontally scrollable filter chips — mobile-friendly */}
