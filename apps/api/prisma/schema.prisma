@@ -417,3 +417,45 @@ model Announcement {
 
   @@index([active, showFrom])
 }
+// Paste at the END of apps/api/prisma/schema.prisma
+
+enum InventoryLoanStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  RETURNED
+}
+
+model InventoryItem {
+  id            String          @id @default(uuid()) @db.Uuid
+  name          String
+  category      String          @default("General")
+  description   String?
+  location      String?
+  quantityTotal Int
+  active        Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  loans         InventoryLoan[]
+
+  @@index([active])
+}
+
+model InventoryLoan {
+  id          String              @id @default(uuid()) @db.Uuid
+  itemId      String              @db.Uuid
+  userId      String              @db.Uuid
+  quantity    Int                 @default(1)
+  status      InventoryLoanStatus @default(REQUESTED)
+  purpose     String?
+  neededBy    DateTime?
+  decidedById String?             @db.Uuid
+  decidedAt   DateTime?
+  returnedAt  DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  item        InventoryItem       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId, status])
+  @@index([userId])
+}
