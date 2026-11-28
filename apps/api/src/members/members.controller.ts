@@ -18,11 +18,14 @@ import {
   DirectoryQueryDto,
   UpdateProfileDto,
   VerifyEmailDto,
+  CreateMemberDto,
 } from "./dto/members.dto";
 import { Public } from "../auth/decorators/public.decorator";
 import { RequirePermissions } from "../auth/decorators/permissions.decorator";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import type { AccessClaims } from "../auth/token.service";
+import { permissionsFor } from "../auth/permissions";
+import { ForbiddenException } from "@nestjs/common";
 
 /* ─── Public routes ────────────────────────────────────────── */
 
@@ -74,8 +77,8 @@ export class MembersAdminController {
     @Param("id", new ParseUUIDPipe()) id: string,
     @CurrentUser() claims: AccessClaims,
   ) {
-    const application = await this.members.approveApplication(id, claims.sub);
-    return { application };
+    const { application, emailSent } = await this.members.approveApplication(id, claims.sub);
+    return { application, emailSent };
   }
 
   @Post(":id/reject")
@@ -99,11 +102,42 @@ export class MembersAdminController {
 export class MembersController {
   constructor(private readonly members: MembersService) {}
 
+  /** Full member directory: admins only. */
   @Get()
-  @ApiOperation({ summary: "Directory — search + filters" })
+  @RequirePermissions("members:directory")
+  @ApiOperation({ summary: "Directory — search + filters (admins)" })
   async list(@Query() q: DirectoryQueryDto) {
     const items = await this.members.directory(q);
     return { items };
+  }
+
+  /** Admin adds a member directly. They receive an email to set their own password. */
+  @Post()
+  @HttpCode(201)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @RequirePermissions("members:create")
+  @ApiOperation({ summary: "Add a member directly (admin)" })
+  async create(@Body() dto: CreateMemberDto, @CurrentUser() claims: AccessClaims) {
+    return this.members.createMember(dto, { id: claims.sub, role: claims.role });
+  }
+
+  /** Sends a new "set your password" link to a member who has never signed in. */
+  @Post(":id/resend-invite")
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @RequirePermissions("members:create")
+  async resendInvite(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @CurrentUser() claims: AccessClaims,
+  ) {
+    return this.members.resendInvite(id, claims.sub);
+  }
+
+  /** Visible to every signed-in member: leadership names + number of active members. */
+  @Get("summary")
+  @ApiOperation({ summary: "Leadership and active-member count (no personal details)" })
+  async summary() {
+    return this.members.summary();
   }
 
   @Get("me")
@@ -120,7 +154,15 @@ export class MembersController {
   }
 
   @Get(":id")
-  async detail(@Param("id", new ParseUUIDPipe()) id: string) {
+  async detail(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @CurrentUser() claims: AccessClaims,
+  ) {
+    // Members may only open their own profile; admins may open anyone's.
+    const canSeeAll = permissionsFor(claims.role).includes("members:directory");
+    if (id !== claims.sub && !canSeeAll) {
+      throw new ForbiddenException("You can only view your own profile");
+    }
     const member = await this.members.memberDetail(id);
     return { member };
   }
