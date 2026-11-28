@@ -82,6 +82,48 @@ export class VerifyEmailDto {
   token!: string;
 }
 
+/* ─── Admin: add a member directly ──────────────────────────── */
+
+/** Roles an admin may assign when adding someone. SUPER_ADMIN is never created here. */
+export const CREATABLE_ROLES = [
+  "MEMBER",
+  "TEAM_LEAD",
+  "OPERATIONS_ADMIN",
+  "FINANCE_ADMIN",
+] as const;
+
+export class CreateMemberDto {
+  @ApiProperty()
+  @trim()
+  @IsString() @MinLength(2) @MaxLength(120)
+  fullName!: string;
+
+  @ApiProperty()
+  @lowerTrim()
+  @IsEmail() @MaxLength(254)
+  email!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional() @trim() @IsString()
+  @Matches(PHONE_RE, { message: "Enter a valid phone number" })
+  phone?: string;
+
+  @ApiPropertyOptional({ enum: CREATABLE_ROLES, default: "MEMBER" })
+  @IsOptional() @IsIn(CREATABLE_ROLES)
+  role?: (typeof CREATABLE_ROLES)[number];
+
+  @ApiPropertyOptional()
+  @IsOptional() @trim() @IsString() @MaxLength(120)
+  location?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @trimEach()
+  @IsArray() @ArrayMaxSize(20)
+  @IsString({ each: true }) @MaxLength(40, { each: true })
+  skills?: string[];
+}
+
 /* ─── Review ────────────────────────────────────────────────── */
 
 export class RejectApplicationDto {
@@ -176,4 +218,17 @@ export type MemberDetailResponse = MemberResponse & {
     volunteerHours: number;
     eventsAttended: number;
   };
+};
+
+/** Result of adding a member directly (or resending an invitation). */
+export type InviteResult = {
+  member: MemberResponse;
+  /** false when the email could not be sent; the admin can use "Resend invitation". */
+  emailSent: boolean;
+};
+
+/** What an ordinary member may see: the leaders' names and a head count. */
+export type MembersSummary = {
+  activeMembers: number;
+  leaders: { id: string; fullName: string; role: Role; avatarUrl: string | null }[];
 };
