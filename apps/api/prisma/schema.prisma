@@ -459,3 +459,39 @@ model InventoryLoan {
   @@index([itemId, status])
   @@index([userId])
 }
+// Paste at the END of apps/api/prisma/schema.prisma
+
+enum SwapStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+}
+
+model SwapListing {
+  id          String        @id @default(uuid()) @db.Uuid
+  ownerId     String        @db.Uuid
+  title       String
+  description String?
+  category    String        @default("Other")
+  wanted      String?
+  location    String?
+  imageUrl    String?
+  status      SwapStatus    @default(OPEN)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  requests    SwapRequest[]
+
+  @@index([status, createdAt])
+  @@index([ownerId])
+}
+
+model SwapRequest {
+  id          String      @id @default(uuid()) @db.Uuid
+  listingId   String      @db.Uuid
+  requesterId String      @db.Uuid
+  message     String?
+  createdAt   DateTime    @default(now())
+  listing     SwapListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, requesterId])
+}
