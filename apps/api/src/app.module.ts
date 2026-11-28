@@ -23,6 +23,7 @@ import { ProjectsModule } from "./projects/projects.module";
 import { AnnouncementsModule } from "./announcements/announcements.module";
 import { PublicModule } from "./public/public.module";
 import { InventoryModule } from "./inventory/inventory.module";
+import { SwapModule } from "./swap/swap.module";
 
 /* ─── Cross-cutting concerns ─────────────────────────────────────── */
 import { ThrottlerBehindProxyGuard } from "./common/guards/throttler.guard";
@@ -57,16 +58,17 @@ import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
     EventsModule,
     ImpactModule,
     HealthModule,
-    InventoryModule,
 
     /* ─── Website content managed from the dashboard ──────────── */
     ProjectsModule,
     AnnouncementsModule,
     PublicModule,
+    InventoryModule,
+    SwapModule,
 
     /* Add the remaining feature modules here as they are created
-       (incidents, swap, learning, finance, petitions, admin).
-       A module that is not listed here has NO routes,
+       (inventory, incidents, swap, learning, finance, petitions,
+       admin). A module that is not listed here has NO routes,
        even if its files exist in the repo. */
   ],
 
